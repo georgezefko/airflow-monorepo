@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_orders
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+  - name: dim_users
+    columns:
+      - name: user_id
+        data_tests: [unique, not_null]
+  - name: fct_events
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]

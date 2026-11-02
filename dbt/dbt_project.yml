@@ -1,0 +1,20 @@
+name: thelook
+version: "1.0.0"
+profile: thelook
+
+# Every BigQuery job gets these keys as labels, so INFORMATION_SCHEMA.JOBS can be grouped per model/strategy.
+query-comment:
+  comment: "{{ tojson({'node_id': node.unique_id if node else none, 'target_name': target.name, 'events_strategy': var('events_strategy', 'merge')}) }}"
+  job-label: true
+
+models:
+  thelook:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts

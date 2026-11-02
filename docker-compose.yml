@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 10
+
+  # ponytail: one `airflow standalone` container (api-server, scheduler, dag-processor, triggerer).
+  # Split into services when you need to mimic the k8s topology locally; kind covers that.
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    command: standalone
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"  # local only: no login
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcp-key.json
+      GCP_PROJECT: ${GCP_PROJECT:?set GCP_PROJECT in .env}
+      DBT_DATASET: ${DBT_DATASET:-dbt_dev}
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./dbt:/opt/airflow/dbt
+      - ./tests:/opt/airflow/tests
+      - ${GCP_KEYFILE:?set GCP_KEYFILE in .env}:/opt/airflow/gcp-key.json:ro
+
+volumes:
+  pgdata:
