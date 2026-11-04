@@ -1,0 +1,13 @@
+models:
+  - name: orders_by_traffic_source
+    description: One row per traffic source with its orders and customers.
+    columns:
+      - name: traffic_source
+        description: Channel the users came from. Primary key of the model.
+        data_tests:
+          - unique
+          - not_null
+      - name: orders
+        description: Total orders from users of this source, including cancelled orders.
+      - name: customers
+        description: Distinct users of this source who placed an order.
