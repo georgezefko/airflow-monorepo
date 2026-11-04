@@ -5,3 +5,6 @@ RUN python -m venv /home/airflow/dbt-venv \
 
 RUN pip install --no-cache-dir "apache-airflow==${AIRFLOW_VERSION}" astronomer-cosmos==1.16.0 \
     --constraint "${HOME}/constraints.txt"
+
+RUN pip install --no-cache-dir "apache-airflow==${AIRFLOW_VERSION}" astronomer-cosmos==1.16.0 pytest \
+--constraint "${HOME}/constraints.txt"
