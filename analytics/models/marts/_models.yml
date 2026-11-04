@@ -1,0 +1,13 @@
+models:
+  - name: daily_orders
+    description: One row per day with order counts.
+    columns:
+      - name: order_date
+        description: Date the orders were created. Primary key of the model.
+        data_tests:
+          - unique
+          - not_null
+      - name: orders
+        description: Total orders created that day, including cancelled orders.
+      - name: cancelled_orders
+        description: Orders created that day whose status is Cancelled.
