@@ -30,6 +30,10 @@ models:
     staging:
       +schema: staging
       +tags: ["platform"]
+    intermediate:
+      marketing:
+        +schema: marketing
+        +tags: ["marketing"]
     marts:
       +materialized: table
       sales:

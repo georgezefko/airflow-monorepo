@@ -11,3 +11,11 @@ models:
         description: Total orders from users of this source, including cancelled orders.
       - name: customers
         description: Distinct users of this source who placed an order.
+  - name: fct_events
+    description: One row per website event, built incrementally. The subject of the strategy experiment.
+    columns:
+      - name: event_id
+        description: Primary key of the event.
+        data_tests:
+          - unique
+          - not_null

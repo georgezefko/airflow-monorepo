@@ -83,7 +83,6 @@ x-airflow-common:
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ./analytics:/opt/airflow/analytics
-    - ~/.dbt/profiles.yml:/home/airflow/.dbt/profiles.yml:ro
     - ~/.config/gcloud/application_default_credentials.json:/opt/airflow/gcp-adc.json:ro
     - ./tests:/opt/airflow/tests
   user: "${AIRFLOW_UID:-50000}:0"

@@ -19,7 +19,7 @@ def team_dag(team, schedule):
         profile_config=ProfileConfig(
             profile_name="analytics",
             target_name="dev",
-            profiles_yml_filepath="/home/airflow/.dbt/profiles.yml",
+             profiles_yml_filepath=f"{DBT_PROJECT}/profiles.yml",
         ),
         execution_config=ExecutionConfig(
             dbt_executable_path="/home/airflow/dbt-venv/bin/dbt",

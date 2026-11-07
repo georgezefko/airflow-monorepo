@@ -43,4 +43,12 @@ models:
         description: Country of the user.
       - name: created_at
         description: Timestamp when the user was created.
+  - name: stg_events
+    description: One row per website event.
+    columns:
+      - name: event_id
+        description: Primary key of the event.
+        data_tests:
+          - unique
+          - not_null
 

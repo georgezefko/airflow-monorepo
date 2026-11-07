@@ -1,3 +1,5 @@
+-include .env
+export
 DBT = docker compose exec -T -w /opt/airflow/analytics airflow-worker /home/airflow/dbt-venv/bin/dbt
 AIRFLOW = docker compose exec -T airflow-scheduler airflow
 DAGS ?= platform_dbt sales_dbt marketing_dbt
