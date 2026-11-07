@@ -29,6 +29,7 @@ models:
   analytics:
     staging:
       +schema: staging
+      +tags: ["staging"]
     marts:
       +materialized: table
       sales:
