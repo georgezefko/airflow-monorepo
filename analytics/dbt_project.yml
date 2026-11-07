@@ -24,6 +24,11 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 flags:
   send_anonymous_usage_stats: false
+
+query-comment:
+  comment: "{{ tojson({'node_id': node.unique_id if node else none, 'target_name': target.name, 'events_strategy': var('events_strategy', 'merge')}) }}"
+  job-label: true
+
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 models:
