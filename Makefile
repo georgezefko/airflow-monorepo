@@ -6,7 +6,7 @@ DAGS ?= platform_dbt sales_dbt marketing_dbt
 TRIGGER ?= platform_dbt
 
 .DEFAULT_GOAL := help
-.PHONY: help all up down parse test run dbt-debug dbt-build
+.PHONY: help all up down parse test run dbt-debug dbt-build gantt
 
 help:  ## Show the available commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /: /'
@@ -38,3 +38,6 @@ dbt-debug:  ## Check the BigQuery connection from the container (needs make up)
 
 dbt-build:  ## Run dbt build in the container (needs make up), e.g. make dbt-build s=tag:sales
 	$(DBT) build $(if $(s),--select $(s))
+
+gantt:  ## Draw the last dbt run as a timeline
+	python3 scripts/gantt.py
