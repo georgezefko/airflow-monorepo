@@ -14,7 +14,7 @@ def team_dag(team, schedule):
         ),
         render_config=RenderConfig(
             load_method=LoadMode.DBT_MANIFEST,
-            select=[f"+tag:{team}"],
+            select=[f"tag:{team}"],
         ),
         profile_config=ProfileConfig(
             profile_name="analytics",
