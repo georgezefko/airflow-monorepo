@@ -1,3 +1,10 @@
+{{
+    config(
+        materialized='table',
+        partition_by={'field': 'created_at', 'data_type': 'timestamp', 'granularity': 'day'}
+    )
+}}
+
 select
     cast(id as string) as event_id,
     session_id,
