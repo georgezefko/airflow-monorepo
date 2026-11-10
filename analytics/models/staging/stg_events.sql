@@ -15,4 +15,4 @@ select
     browser,
     uri,
     created_at
-from {{ source('thelook', 'events' }}
+from {{ source('thelook', 'events') }}
