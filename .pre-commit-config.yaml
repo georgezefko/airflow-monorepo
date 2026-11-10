@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: dbt-parse
+        name: dbt parse
+        entry: bash -c 'cd analytics && GCP_PROJECT=${GCP_PROJECT:-ci-placeholder} uv run dbt parse --quiet --target-path target/pre-commit'
+        language: system
+        files: ^analytics/
+        pass_filenames: false
