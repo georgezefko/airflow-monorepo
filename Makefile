@@ -1,42 +1,43 @@
 -include .env
 export
-export GOOGLE_APPLICATION_CREDENTIALS ?= $(GCP_KEYFILE)
+DBT = docker compose exec -T -w /opt/airflow/analytics airflow-worker /home/airflow/dbt-venv/bin/dbt
+AIRFLOW = docker compose exec -T airflow-scheduler airflow
+DAGS ?= platform_dbt sales_dbt marketing_dbt
+TRIGGER ?= platform_dbt
 
-DBT = uv run dbt --no-use-colors
-DBT_ARGS = --project-dir dbt --profiles-dir dbt
+.DEFAULT_GOAL := help
+.PHONY: help all up down parse test run dbt-debug dbt-build gantt
 
-.PHONY: setup up down logs test lint dbt-debug dbt-parse dbt-build dbt-compile gantt
+help:  ## Show the available commands
+	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /: /'
 
-setup:            ## local venv + git hooks
-	uv sync
-	uv run pre-commit install
+all: up test run  ## Start Airflow, run the tests, and trigger the DAGs
 
-up: dbt-parse     ## Airflow on http://localhost:8080 (Cosmos reads dbt/target/manifest.json)
-	docker compose up -d --build
+up: parse  ## Refresh the manifest, build the image, and start Airflow
+	docker compose up -d --build --wait
 
-down:
+down:  ## Stop Airflow and keep its metadata
 	docker compose down
 
-logs:
-	docker compose logs -f airflow
+parse:  ## Regenerate analytics/target/manifest.json
+	cd analytics && uv run dbt parse
 
-test:             ## DAG integrity, inside the real Airflow image (needs `make up`)
-	docker compose exec airflow python -m pytest tests -q
+test:  ## Run the DAG tests (needs make up)
+	docker compose exec -T airflow-worker python -m pytest tests -q
 
-lint:
-	uv run pre-commit run --all-files
+# ponytail: triggers without waiting for the result, watch the run in the UI
+run:  ## Unpause the DAGs and trigger one (needs make up), e.g. make run TRIGGER=sales_dbt
+	$(AIRFLOW) dags reserialize
+	@for dag in $(DAGS); do \
+	        $(AIRFLOW) dags unpause $$dag || exit 1; \
+	done
+	$(AIRFLOW) dags trigger $(TRIGGER)
 
-dbt-debug:
-	$(DBT) debug $(DBT_ARGS)
+dbt-debug:  ## Check the BigQuery connection from the container (needs make up)
+	$(DBT) debug
 
-dbt-parse:
-	$(DBT) parse $(DBT_ARGS)
+dbt-build:  ## Run dbt build in the container (needs make up), e.g. make dbt-build s=tag:sales
+	$(DBT) build $(if $(s),--select $(s))
 
-dbt-compile:
-	$(DBT) compile $(DBT_ARGS)
-
-dbt-build:        ## e.g. make dbt-build s=fct_events
-	$(DBT) build $(DBT_ARGS) $(if $(s),-s $(s))
-
-gantt:            ## demo 5: timeline of the last run
-	uv run python scripts/gantt.py
+gantt:  ## Draw the last dbt run as a timeline
+	python3 scripts/gantt.py

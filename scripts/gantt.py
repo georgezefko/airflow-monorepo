@@ -15,7 +15,7 @@ def rows(run_results: dict) -> list[tuple[str, str, datetime, datetime]]:
         if execute and execute.get("started_at"):
             out.append(
                 (
-                    r["unique_id"].split(".")[-1],
+                    r["unique_id"].split(".")[2],
                     r["thread_id"],
                     datetime.fromisoformat(execute["started_at"].rstrip("Z")),
                     datetime.fromisoformat(execute["completed_at"].rstrip("Z")),
@@ -37,5 +37,5 @@ def render(data: list[tuple[str, str, datetime, datetime]]) -> str:
 
 
 if __name__ == "__main__":
-    path = Path(sys.argv[1] if len(sys.argv) > 1 else "dbt/target/run_results.json")
+    path = Path(sys.argv[1] if len(sys.argv) > 1 else "analytics/target/run_results.json")
     print(render(rows(json.loads(path.read_text()))))
