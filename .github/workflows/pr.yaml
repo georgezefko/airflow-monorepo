@@ -1,0 +1,32 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      GCP_PROJECT: ci-placeholder  # parse never connects to BigQuery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+
+      - name: dbt parse
+        run: cd analytics && uv run dbt parse
+
+      - name: Build Airflow image
+        run: docker build -t airflow-ci .
+
+      - name: DAG tests
+        run: |
+          docker run --rm --entrypoint python -w /opt/airflow \
+            -v "$PWD/dags:/opt/airflow/dags:ro" \
+            -v "$PWD/tests:/opt/airflow/tests:ro" \
+            -v "$PWD/analytics:/opt/airflow/analytics:ro" \
+            airflow-ci -m pytest tests -q -p no:cacheprovider
