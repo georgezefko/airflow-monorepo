@@ -12,7 +12,7 @@ flowchart LR
         s_events[(events)]
     end
 
-    subgraph platform["platform_dbt · @daily · dev_staging"]
+    subgraph platform["platform_dbt · @daily · analytics_staging"]
         stg_orders["stg_orders (view)"]
         stg_items["stg_order_items (view)"]
         stg_users["stg_users (view)"]
@@ -20,12 +20,12 @@ flowchart LR
         ready{{staging_ready}}
     end
 
-    subgraph sales["sales_dbt · dev_sales"]
+    subgraph sales["sales_dbt · analytics_sales"]
         daily_orders["daily_orders (table)"]
         daily_revenue["daily_revenue (table)"]
     end
 
-    subgraph marketing["marketing_dbt · dev_marketing"]
+    subgraph marketing["marketing_dbt · analytics_marketing"]
         int_events["int_events_scaled (view)"]
         fct_events["fct_events (incremental)"]
         by_source["orders_by_traffic_source (table)"]
