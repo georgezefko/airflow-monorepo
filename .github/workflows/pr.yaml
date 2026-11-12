@@ -30,3 +30,31 @@ jobs:
             -v "$PWD/tests:/opt/airflow/tests:ro" \
             -v "$PWD/analytics:/opt/airflow/analytics:ro" \
             airflow-ci -m pytest tests -q -p no:cacheprovider
+  dbt-build:
+    needs: checks
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository  # forks get no GCP token
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GCP_PROJECT: project-09344e23-c1cd-49df-a40
+      DBT_DATASET: ci_pr_${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: base
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/providers/github
+          service_account: ci-dbt@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
+
+      - name: Manifest of main (what's in analytics_*)
+        run: cd base/analytics && DBT_DATASET=analytics uv run --project "$GITHUB_WORKSPACE" dbt parse --target-path "$GITHUB_WORKSPACE/state"
+
+      - name: Build what the PR changed
+        run: cd analytics && uv run dbt build -s state:modified+ --defer --state ../state

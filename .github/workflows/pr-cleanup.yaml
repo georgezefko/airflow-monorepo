@@ -1,0 +1,27 @@
+name: PR cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  drop-datasets:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      P: project-09344e23-c1cd-49df-a40
+      PREFIX: ci_pr_${{ github.event.pull_request.number }}_
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/providers/github
+          service_account: ci-dbt@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Drop this PR's datasets
+        run: |
+          for d in $(bq ls -d --project_id=$P --format=json | jq -r '.[].datasetReference.datasetId' | grep "^$PREFIX" || true); do
+            bq rm -r -f "$P:$d"
+          done

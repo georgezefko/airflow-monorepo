@@ -1,0 +1,28 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="ci-gcp-auth" name="CI to GCP auth (Workload Identity Federation)">
+    <mxGraphModel adaptiveColors="auto">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="GitHub Actions → BigQuery without a key (Workload Identity Federation)" style="text;html=1;fontSize=20;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="900" height="40" as="geometry"/></mxCell>
+        <mxCell id="gh" value="GitHub" style="swimlane;startSize=26;html=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="20" y="60" width="240" height="320" as="geometry"/></mxCell>
+        <mxCell id="job" value="&lt;b&gt;GitHub Actions job&lt;/b&gt;&lt;br&gt;&lt;small&gt;PR #42 · id-token: write&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="gh"><mxGeometry x="30" y="50" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="oidc" value="&lt;b&gt;GitHub OIDC provider&lt;/b&gt;&lt;br&gt;&lt;small&gt;token.actions.githubusercontent.com&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="gh"><mxGeometry x="30" y="200" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="gcp" value="Google Cloud · project-09344e23-c1cd-49df-a40" style="swimlane;startSize=26;html=1;fontSize=14;fillColor=#e8f4f8;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="320" y="60" width="760" height="320" as="geometry"/></mxCell>
+        <mxCell id="sts" value="&lt;b&gt;Security Token Service&lt;/b&gt;&lt;br&gt;&lt;small&gt;pool github · provider github&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="gcp"><mxGeometry x="20" y="50" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="cond" value="repository ==&lt;br&gt;airflow-monorepo?" style="rhombus;whiteSpace=wrap;html=1;fontSize=14;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="gcp"><mxGeometry x="20" y="180" width="180" height="100" as="geometry"/></mxCell>
+        <mxCell id="iamc" value="&lt;b&gt;IAM Credentials&lt;/b&gt;&lt;br&gt;&lt;small&gt;act as ci-dbt@…&lt;br&gt;(workloadIdentityUser)&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="gcp"><mxGeometry x="280" y="50" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="denied" value="&lt;b&gt;Rejected&lt;/b&gt;&lt;br&gt;&lt;small&gt;tokens from any other repo&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="gcp"><mxGeometry x="280" y="200" width="180" height="60" as="geometry"/></mxCell>
+        <mxCell id="bq" value="&lt;b&gt;BigQuery&lt;/b&gt;&lt;br&gt;&lt;small&gt;create ci_pr_42_*&lt;br&gt;read analytics_*&lt;/small&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=14;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="gcp"><mxGeometry x="550" y="50" width="180" height="70" as="geometry"/></mxCell>
+        <mxCell id="e1" value="1. request token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;exitX=0.3;exitY=1;entryX=0.3;entryY=0;" edge="1" parent="gh" source="job" target="oidc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="2. signed JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;dashed=1;exitX=0.7;exitY=0;entryX=0.7;entryY=1;" edge="1" parent="gh" source="oidc" target="job"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="3. JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="1" source="job" target="sts"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="4. check" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="gcp" source="sts" target="cond"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="5. yes: federated token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontColor=#2D7600;" edge="1" parent="gcp" source="cond" target="iamc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5n" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;fontColor=#B20000;" edge="1" parent="gcp" source="cond" target="denied"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" value="6. 1-hour token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;" edge="1" parent="gcp" source="iamc" target="bq"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="note" value="No key is stored anywhere: every run gets new tokens that expire after about an hour. ci-dbt can create its own ci_pr_* datasets and read analytics_*, but cannot change analytics_*." style="text;html=1;fontSize=13;align=left;verticalAlign=top;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="20" y="395" width="1060" height="40" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
