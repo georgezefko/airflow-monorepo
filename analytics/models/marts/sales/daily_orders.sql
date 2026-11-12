@@ -6,3 +6,4 @@ select
     countif(status = 'Cancelled') as cancelled_orders
 from {{ ref('stg_orders') }}
 group by order_date
+--check the ci dummy comment
