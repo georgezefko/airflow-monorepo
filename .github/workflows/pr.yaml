@@ -26,6 +26,8 @@ jobs:
       - name: DAG tests (once per team)
         run: |
           docker run --rm --entrypoint python -w /opt/airflow/repo \
+            -e AIRFLOW__COSMOS__ENABLE_CACHE_DBT_LS=False \
+            -e GCP_PROJECT \
             -v "$PWD:/opt/airflow/repo:ro" \
             -v "$PWD/plugins:/opt/airflow/plugins:ro" \
             airflow-ci -m pytest tests -q -p no:cacheprovider

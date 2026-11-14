@@ -35,7 +35,7 @@ CI can't change or delete `analytics_*`, so a PR can't damage the shared tables.
 
 ## Pushing images: a second service account
 
-`build.yaml` pushes the dbt image with `ci-build`, which has `roles/artifactregistry.writer` on the
+`build.yaml` pushes the Airflow image with `ci-build`, which has `roles/artifactregistry.writer` on the
 `airflow-monorepo` registry and nothing else. It isn't `ci-dbt` because every PR branch may act as
 `ci-dbt`: a PR could edit its workflow and push an image that later gets deployed. Only runs on
 `main` may act as `ci-build`. The registry also has immutable tags, so even `main` can't replace

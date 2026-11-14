@@ -3,21 +3,21 @@ name: Build
 on:
   push:
     branches: [main]
-    paths:  # everything that goes into the dbt image
-      - 'dbt_project.yml'
-      - 'profiles.yml'
-      - 'macros/**'
-      - 'teams/*/dbt/**'
-      - 'dbt.Dockerfile*'
+    paths:  # everything that goes into the Airflow image
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'plugins/**'
       - '.github/workflows/build.yaml'
 
 jobs:
-  dbt-image:
+  # The platform's Airflow image: Airflow, Cosmos, the dbt CLI and the shared DAG helpers.
+  # Teams' DAGs, dbt models and SQL aren't in it; Airflow reads them from each team's git bundle.
+  airflow-image:
     runs-on: ubuntu-latest
     permissions: {contents: read, id-token: write}
     env:
       REGISTRY: us-central1-docker.pkg.dev
-      IMAGE: us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/dbt:${{ github.sha }}
+      IMAGE: us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow:${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - id: auth
@@ -29,4 +29,4 @@ jobs:
       - name: Log in to Artifact Registry
         run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
       - name: Build and push
-        run: docker build -f dbt.Dockerfile -t "$IMAGE" . && docker push "$IMAGE"
+        run: docker build -t "$IMAGE" . && docker push "$IMAGE"

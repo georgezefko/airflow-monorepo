@@ -8,7 +8,7 @@ project, as someone with owner rights. Why it works this way: [`ci-gcp-auth.md`]
 | Pool `github`, provider `github` | Both service accounts | Accept GitHub tokens from this repository only |
 | `ci-dbt` | `pr.yaml` (`dbt-build`), `pr-cleanup.yaml`, on any branch | Build in `ci_pr_<n>_*`, read `analytics_*` |
 | `ci-build` | `build.yaml`, on `main` only | Push images to the `airflow-monorepo` registry |
-| Registry `airflow-monorepo` (`us-central1`) | `build.yaml` | Holds `dbt:<sha>` images; tags can't be overwritten |
+| Registry `airflow-monorepo` (`us-central1`) | `build.yaml` | Holds `airflow:<sha>` images; tags can't be overwritten |
 
 ## Variables
 

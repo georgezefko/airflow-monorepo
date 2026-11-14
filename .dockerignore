@@ -1,0 +1,4 @@
+# The Airflow image only needs plugins/; everything else (DAGs, dbt models) comes from git bundles
+*
+!plugins/
+**/__pycache__

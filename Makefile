@@ -13,13 +13,13 @@ help:  ## Show the available commands
 
 all: up test run  ## Start Airflow, run the tests, and trigger the DAGs
 
-up: parse  ## Refresh the manifest, build the image, and start Airflow
+up:  ## Build the image and start Airflow
 	docker compose up -d --build --wait
 
 down:  ## Stop Airflow and keep its metadata
 	docker compose down
 
-parse:  ## Regenerate target/manifest.json
+parse:  ## Check the dbt project parses (Airflow lists models itself with dbt ls)
 	uv run dbt parse
 
 test:  ## Run the DAG tests (needs make up)
