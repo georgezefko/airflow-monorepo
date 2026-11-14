@@ -17,10 +17,10 @@ jobs:
       - id: auth
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/pro
+          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/providers/github
           service_account: ci-build@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
-          token_format: acc
+          token_format: access_token
       - name: Log in to Artifact Registry
-        run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2access
+        run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
       - name: Build and push
         run: docker build -t "$IMAGE" analytics && docker push "$IMAGE"
