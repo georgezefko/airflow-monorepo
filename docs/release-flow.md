@@ -162,23 +162,77 @@ release-please needs a GitHub App token, not the built-in `GITHUB_TOKEN`. GitHub
 workflows for PRs and tags created with `GITHUB_TOKEN`, so the release PR would never get the
 required checks and couldn't be merged.
 
-One-time setup, by a repository admin:
+The workflow exchanges the App's private key for a token that's valid for one hour and only for
+this repository.
 
-1. Create the App at https://github.com/settings/apps/new: no webhook, installable only on this
-   account, with repository permissions **Contents**, **Pull requests** and **Issues** set to
-   read and write (issues covers the labels release-please puts on release PRs).
-2. Install it on this repository only (**Install App** → **Only select repositories**).
-3. Generate a private key on the App's page, store it and the App's **Client ID**, then delete
-   the downloaded key:
+#### One-time setup
 
-   ```bash
-   gh variable set RELEASE_APP_CLIENT_ID --body <client id>
-   gh secret set RELEASE_APP_PRIVATE_KEY < <app-name>.<date>.private-key.pem
-   rm <app-name>.<date>.private-key.pem
-   ```
+Done once, by a repository admin, in the GitHub UI.
 
-The workflow exchanges the key for a token that's valid for one hour and only for this
-repository.
+**1. Create the App.** Open https://github.com/settings/apps/new (profile picture → **Settings**
+→ **Developer settings** → **GitHub Apps** → **New GitHub App**) and fill in:
+
+| Field | Value |
+|---|---|
+| GitHub App name | `airflow-monorepo-release` (must be unique across GitHub; add a suffix if taken) |
+| Homepage URL | `https://github.com/georgezefko/airflow-monorepo` |
+| Identifying and authorizing users, Post installation | Leave empty |
+| Webhook → Active | Untick |
+| Where can this GitHub App be installed? | Only on this account |
+
+Under **Permissions → Repository permissions**, set only these and leave the rest at *No access*
+(*Metadata: Read-only* is added automatically):
+
+| Permission | Access | Used for |
+|---|---|---|
+| Contents | Read and write | Committing changelogs, creating tags and releases |
+| Issues | Read and write | Labels on release PRs (`autorelease: pending`) |
+| Pull requests | Read and write | Opening and updating release PRs |
+
+Click **Create GitHub App**.
+
+**2. Copy the Client ID and generate a key.** On the App's page, copy the **Client ID** (starts
+with `Iv`). At the bottom, **Generate a private key** downloads a `.pem` file.
+
+**3. Install the App.** In the App's left menu: **Install App** → **Install** → **Only select
+repositories** → `airflow-monorepo`.
+
+**4. Store both in the repository**, then delete the downloaded key, so it exists only in
+GitHub's secret store:
+
+```bash
+gh variable set RELEASE_APP_CLIENT_ID --body <client id>
+gh secret set RELEASE_APP_PRIVATE_KEY < ~/Downloads/<app-name>.<date>.private-key.pem
+rm ~/Downloads/<app-name>.<date>.private-key.pem
+```
+
+The Client ID isn't secret, so it's a variable. The private key is a secret: anyone with it can act
+as the App on this repository.
+
+#### Checking the setup
+
+```bash
+gh variable list   # RELEASE_APP_CLIENT_ID with its value
+gh secret list     # RELEASE_APP_PRIVATE_KEY, without a value: GitHub never shows it
+```
+
+Whether the App is installed only shows when the workflow runs. Merge a PR whose title isn't
+releasable (for example `ci: …`) and watch the **Release** run:
+
+```bash
+gh run watch $(gh run list --workflow release-please.yaml --limit 1 --json databaseId -q '.[0].databaseId')
+```
+
+It should pass and open no release PR.
+
+| Error | Cause | Fix |
+|---|---|---|
+| `create-github-app-token`: `Not Found` or `Integration not found` | The App isn't installed on this repository | Repeat step 3 |
+| `create-github-app-token`: `A JSON web token could not be decoded` | Wrong or incomplete private key, or a wrong Client ID | Generate a new key and repeat step 4 |
+| `release-please`: `Resource not accessible by integration` | A permission is missing | Check the three permissions on the App's page, then accept the change under the installation's settings |
+
+**Rotating the key:** generate a new key on the App's page, run `gh secret set` again, then
+delete the old key there.
 
 ## 5. Prod: one team at a time
 
