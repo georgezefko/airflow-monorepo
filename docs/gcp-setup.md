@@ -74,10 +74,10 @@ gcloud artifacts repositories add-iam-policy-binding airflow-monorepo --project 
 SUB_PREFIX=$(gh api repos/$REPO/actions/oidc/customization/sub -q .sub_claim_prefix)
 # repo:georgezefko@46191927/airflow-monorepo@1443457357
 
-# Only runs on main
+# Only runs on main. Keep the braces: in zsh, "$SUB_PREFIX:ref" applies the :r modifier
 gcloud iam service-accounts add-iam-policy-binding $SA --project $P \
   --role roles/iam.workloadIdentityUser \
-  --member "principal://iam.googleapis.com/$POOL/subject/$SUB_PREFIX:ref:refs/heads/main"
+  --member "principal://iam.googleapis.com/$POOL/subject/${SUB_PREFIX}:ref:refs/heads/main"
 ```
 
 The two bindings differ on purpose. `ci-dbt` uses `principalSet://…/attribute.repository/…`, which
