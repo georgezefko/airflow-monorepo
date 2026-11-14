@@ -156,6 +156,35 @@ by its commit SHA.
 `bootstrap-sha` in the config is the commit that created `teams/`. release-please ignores older
 commits, whose titles weren't conventional yet. Every team starts at 1.0.0.
 
+### How the version is chosen
+
+release-please compares with the team's **last release**, not with the open release PR. It
+collects every commit in the team's folder since that release and takes the biggest bump:
+
+| Team commits since the last release | Release PR |
+|---|---|
+| `fix: A` | 1.0.0 → **1.0.1** |
+| `fix: A`, `fix: B` | still **1.0.1**; the changelog lists both |
+| `fix: A`, `fix: B`, `feat: C` | **1.1.0**: a feature outranks fixes |
+| …and a `feat!: D` | **2.0.0** |
+
+A team has at most one open release PR. More merges update it; they don't open new ones or bump
+the version once per commit.
+
+### Several attempts before a release
+
+A fix that doesn't work in dev never gets a version, because only merging the release PR creates
+one:
+
+1. Merge `fix(sales): A`. Dev runs it, and the release PR shows 1.0.1 with fix A.
+2. Testing in dev shows it isn't enough.
+3. Merge `fix(sales): B`. Dev runs it, and the release PR still shows 1.0.1, now with A and B.
+4. When it works in dev, merge the release PR: `sales-v1.0.1` contains A and B.
+
+If a fix was wrong rather than incomplete, undo it with `git revert` (its PR titled
+`revert: fix(sales): A`) before the next attempt. The changelog then shows what was tried and
+undone.
+
 ### The GitHub App
 
 release-please needs a GitHub App token, not the built-in `GITHUB_TOKEN`. GitHub doesn't run
@@ -250,6 +279,8 @@ tagging `main`. Release branches exist only for the one case below that needs th
 |---|---|---|
 | Broken in prod | Move the team's tag back in the deploy repo | None |
 | Fix ready, `main` releasable | `fix(<team>): …` on `main`, then merge the release PR | A normal PR |
+| Fix didn't work in dev | Another `fix(<team>): …`; it joins the same release PR | A normal PR |
+| Broken after a release | Roll back, fix, release the next patch version | A normal PR |
 | Fix ready, but `main` has team work that can't ship yet | Release branch from the tag, cherry-pick, release | The exception |
 | Bad data was written | Roll back, rerun, full-refresh affected incremental models | None |
 
@@ -262,11 +293,23 @@ because tags are immutable. Then fix calmly.
 ### Fix forward (the default)
 
 1. Open a PR titled `fix(sales): …` and squash-merge it. It runs in dev minutes later.
-2. release-please adds the fix to the open sales release PR.
-3. Merge the release PR (`sales-v1.5.1`) and promote it.
+2. release-please adds the fix to the open sales release PR, or opens one if there isn't one.
+3. Test in dev. If it isn't fixed yet, merge another `fix(sales): …`: it joins the same release
+   PR (see [Several attempts before a release](#several-attempts-before-a-release)).
+4. Merge the release PR and promote it.
 
 A sales release contains only sales' own unreleased commits. Other teams' unfinished work on
 `main` doesn't ship with it, because prod pins each team separately.
+
+### A fix after a release
+
+Released versions never change: tags and images are immutable, so a correction always gets a new
+version. Say `sales-v1.5.0` is in prod and turns out broken:
+
+1. Roll back: move sales to `sales-v1.4.0` in the deploy repo.
+2. Merge `fix(sales): …`. release-please compares with `sales-v1.5.0` and opens a **new** release
+   PR, `chore(sales): release 1.5.1`.
+3. Test in dev, merge the release PR, and promote `sales-v1.5.1`.
 
 ### Release branch (the exception)
 
