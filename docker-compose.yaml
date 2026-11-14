@@ -77,14 +77,20 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
     GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcp-adc.json
+    # One DAG bundle per team, each reading only its own dags/ folder. On Kubernetes these
+    # become GitDagBundles with the same names and folders.
+    AIRFLOW__DAG_PROCESSOR__DAG_BUNDLE_CONFIG_LIST: >-
+      [
+      {"name": "platform", "classpath": "airflow.dag_processing.bundles.local.LocalDagBundle", "kwargs": {"path": "/opt/airflow/repo/teams/platform/dags"}},
+      {"name": "sales", "classpath": "airflow.dag_processing.bundles.local.LocalDagBundle", "kwargs": {"path": "/opt/airflow/repo/teams/sales/dags"}},
+      {"name": "marketing", "classpath": "airflow.dag_processing.bundles.local.LocalDagBundle", "kwargs": {"path": "/opt/airflow/repo/teams/marketing/dags"}}
+      ]
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-    - ./analytics:/opt/airflow/analytics
+    - .:/opt/airflow/repo  # the dbt project and every team's DAGs
     - ~/.config/gcloud/application_default_credentials.json:/opt/airflow/gcp-adc.json:ro
-    - ./tests:/opt/airflow/tests
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: dbt-parse
         name: dbt parse
-        entry: bash -c 'cd analytics && GCP_PROJECT=${GCP_PROJECT:-ci-placeholder} uv run dbt parse --quiet --target-path target/pre-commit'
+        entry: bash -c 'GCP_PROJECT=${GCP_PROJECT:-ci-placeholder} uv run dbt parse --quiet --target-path target/pre-commit'
         language: system
-        files: ^analytics/
+        files: ^(dbt_project\.yml|profiles\.yml|macros/|teams/[^/]+/dbt/)
         pass_filenames: false

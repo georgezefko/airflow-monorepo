@@ -1,4 +1,4 @@
-analytics:
+warehouse:
   target: dev
   outputs:
     dev:

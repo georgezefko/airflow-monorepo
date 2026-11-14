@@ -1,6 +1,6 @@
 -include .env
 export
-DBT = docker compose exec -T -w /opt/airflow/analytics airflow-worker /home/airflow/dbt-venv/bin/dbt
+DBT = docker compose exec -T -w /opt/airflow/repo airflow-worker /home/airflow/dbt-venv/bin/dbt
 AIRFLOW = docker compose exec -T airflow-scheduler airflow
 DAGS ?= platform_dbt sales_dbt marketing_dbt
 TRIGGER ?= platform_dbt
@@ -19,11 +19,11 @@ up: parse  ## Refresh the manifest, build the image, and start Airflow
 down:  ## Stop Airflow and keep its metadata
 	docker compose down
 
-parse:  ## Regenerate analytics/target/manifest.json
-	cd analytics && uv run dbt parse
+parse:  ## Regenerate target/manifest.json
+	uv run dbt parse
 
 test:  ## Run the DAG tests (needs make up)
-	docker compose exec -T airflow-worker python -m pytest tests -q
+	docker compose exec -T -w /opt/airflow/repo airflow-worker python -m pytest tests -q -p no:cacheprovider
 
 # ponytail: triggers without waiting for the result, watch the run in the UI
 run:  ## Unpause the DAGs and trigger one (needs make up), e.g. make run TRIGGER=sales_dbt

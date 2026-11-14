@@ -1,0 +1,6 @@
+# The dbt image gets only the dbt project: config, shared macros and each team's dbt/ folder
+*
+!dbt_project.yml
+!profiles.yml
+!macros/
+!teams/*/dbt/
