@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false  # let a run finish; the next one picks up any new commits
+
+permissions: {}  # the GitHub App's token does all the writing
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      # A token from the release GitHub App, not GITHUB_TOKEN: PRs opened with GITHUB_TOKEN
+      # don't trigger workflows, so the release PRs would never get their required checks.
+      - id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      # One release PR per team folder (release-please-config.json). Merging one creates the
+      # tag, e.g. sales-v1.0.1, and a GitHub release.
+      - uses: googleapis/release-please-action@v5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

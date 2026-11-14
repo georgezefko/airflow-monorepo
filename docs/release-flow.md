@@ -8,7 +8,7 @@ schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio).
 | 1. Conventional PR titles, squash merges | Done |
 | 2. One folder per team (`teams/<team>/`), one dbt project | Done |
 | 3. Dev: a dbt image per merge | Done; the manifest upload to GCS is planned |
-| 4. release-please: a release PR per team | Planned |
+| 4. release-please: a release PR per team | In progress |
 | 5. Promote a release to prod | Planned |
 
 ## The short version
@@ -139,15 +139,100 @@ each team folder it reads the commits since the team's last tag that changed fil
 It routes by path, not by scope. If it finds a `feat`, `fix`, `perf`, `revert` or breaking change, it opens
 or updates that team's release PR, which:
 
-- bumps the team's version in `.release-please-manifest.json`;
+- bumps the team's version in `.release-please-manifest.json` and `teams/<team>/version.txt`;
 - adds entries to `teams/<team>/CHANGELOG.md`.
 
-Merging the release PR creates the tag (`sales-v1.5.0`) and a GitHub release with the same
-notes. Until then, more merges just update the PR.
+The release PR is titled `chore(<team>): release <version>`, which passes the PR title check.
+Merging it creates the tag (`sales-v1.5.0`) and a GitHub release with the same notes. Until then,
+more merges just update the PR. A version means "ready for prod"; every merge already runs in dev
+by its commit SHA.
+
+| File | What it holds |
+|---|---|
+| [`release-please-config.json`](../release-please-config.json) | One package per team folder; one release PR each |
+| [`.release-please-manifest.json`](../.release-please-manifest.json) | Each team's current version, updated by release PRs |
+| [`release-please.yaml`](../.github/workflows/release-please.yaml) | Runs release-please on every push to `main` |
+
+`bootstrap-sha` in the config is the commit that created `teams/`. release-please ignores older
+commits, whose titles weren't conventional yet. Every team starts at 1.0.0.
+
+### The GitHub App
 
 release-please needs a GitHub App token, not the built-in `GITHUB_TOKEN`. GitHub doesn't run
 workflows for PRs and tags created with `GITHUB_TOKEN`, so the release PR would never get the
 required checks and couldn't be merged.
+
+The workflow exchanges the App's private key for a token that's valid for one hour and only for
+this repository.
+
+#### One-time setup
+
+Done once, by a repository admin, in the GitHub UI.
+
+**1. Create the App.** Open https://github.com/settings/apps/new (profile picture → **Settings**
+→ **Developer settings** → **GitHub Apps** → **New GitHub App**) and fill in:
+
+| Field | Value |
+|---|---|
+| GitHub App name | `airflow-monorepo-release` (must be unique across GitHub; add a suffix if taken) |
+| Homepage URL | `https://github.com/georgezefko/airflow-monorepo` |
+| Identifying and authorizing users, Post installation | Leave empty |
+| Webhook → Active | Untick |
+| Where can this GitHub App be installed? | Only on this account |
+
+Under **Permissions → Repository permissions**, set only these and leave the rest at *No access*
+(*Metadata: Read-only* is added automatically):
+
+| Permission | Access | Used for |
+|---|---|---|
+| Contents | Read and write | Committing changelogs, creating tags and releases |
+| Issues | Read and write | Labels on release PRs (`autorelease: pending`) |
+| Pull requests | Read and write | Opening and updating release PRs |
+
+Click **Create GitHub App**.
+
+**2. Copy the Client ID and generate a key.** On the App's page, copy the **Client ID** (starts
+with `Iv`). At the bottom, **Generate a private key** downloads a `.pem` file.
+
+**3. Install the App.** In the App's left menu: **Install App** → **Install** → **Only select
+repositories** → `airflow-monorepo`.
+
+**4. Store both in the repository**, then delete the downloaded key, so it exists only in
+GitHub's secret store:
+
+```bash
+gh variable set RELEASE_APP_CLIENT_ID --body <client id>
+gh secret set RELEASE_APP_PRIVATE_KEY < ~/Downloads/<app-name>.<date>.private-key.pem
+rm ~/Downloads/<app-name>.<date>.private-key.pem
+```
+
+The Client ID isn't secret, so it's a variable. The private key is a secret: anyone with it can act
+as the App on this repository.
+
+#### Checking the setup
+
+```bash
+gh variable list   # RELEASE_APP_CLIENT_ID with its value
+gh secret list     # RELEASE_APP_PRIVATE_KEY, without a value: GitHub never shows it
+```
+
+Whether the App is installed only shows when the workflow runs. Merge a PR whose title isn't
+releasable (for example `ci: …`) and watch the **Release** run:
+
+```bash
+gh run watch $(gh run list --workflow release-please.yaml --limit 1 --json databaseId -q '.[0].databaseId')
+```
+
+It should pass and open no release PR.
+
+| Error | Cause | Fix |
+|---|---|---|
+| `create-github-app-token`: `Not Found` or `Integration not found` | The App isn't installed on this repository | Repeat step 3 |
+| `create-github-app-token`: `A JSON web token could not be decoded` | Wrong or incomplete private key, or a wrong Client ID | Generate a new key and repeat step 4 |
+| `release-please`: `Resource not accessible by integration` | A permission is missing | Check the three permissions on the App's page, then accept the change under the installation's settings |
+
+**Rotating the key:** generate a new key on the App's page, run `gh secret set` again, then
+delete the old key there.
 
 ## 5. Prod: one team at a time
 
