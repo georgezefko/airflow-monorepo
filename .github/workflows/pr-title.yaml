@@ -1,0 +1,19 @@
+name: PR title
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conventional commit title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          re='^(feat|fix|perf|refactor|revert|docs|test|ci|build|chore)(\((platform|sales|marketing)\))?!?: [^ ].*$'
+          [[ "$TITLE" =~ $re ]] && exit 0
+          echo "::error::Title must look like 'feat(sales): add daily_revenue'. Got: $TITLE"
+          exit 1
