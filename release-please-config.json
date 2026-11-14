@@ -4,6 +4,7 @@
   "release-type": "simple",
   "separate-pull-requests": true,
   "pull-request-title-pattern": "chore(${component}): release ${version}",
+  "component-no-space": true,
   "packages": {
     "teams/platform": { "component": "platform" },
     "teams/sales": { "component": "sales" },
