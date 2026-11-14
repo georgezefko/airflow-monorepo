@@ -18,17 +18,16 @@ jobs:
       - uses: astral-sh/setup-uv@v6
 
       - name: dbt parse
-        run: cd analytics && uv run dbt parse
+        run: uv run dbt parse
 
       - name: Build Airflow image
         run: docker build -t airflow-ci .
 
-      - name: DAG tests
+      - name: DAG tests (once per team)
         run: |
-          docker run --rm --entrypoint python -w /opt/airflow \
-            -v "$PWD/dags:/opt/airflow/dags:ro" \
-            -v "$PWD/tests:/opt/airflow/tests:ro" \
-            -v "$PWD/analytics:/opt/airflow/analytics:ro" \
+          docker run --rm --entrypoint python -w /opt/airflow/repo \
+            -v "$PWD:/opt/airflow/repo:ro" \
+            -v "$PWD/plugins:/opt/airflow/plugins:ro" \
             airflow-ci -m pytest tests -q -p no:cacheprovider
   dbt-build:
     needs: checks
@@ -54,7 +53,15 @@ jobs:
           service_account: ci-dbt@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
 
       - name: Manifest of main (what's in analytics_*)
-        run: cd base/analytics && DBT_DATASET=analytics uv run --project "$GITHUB_WORKSPACE" dbt parse --target-path "$GITHUB_WORKSPACE/state"
+        run: |
+          # ponytail: skipped while main still has the old analytics/ layout; remove once it's merged
+          [ -f base/dbt_project.yml ] || exit 0
+          cd base && DBT_DATASET=analytics uv run --project "$GITHUB_WORKSPACE" dbt parse --target-path "$GITHUB_WORKSPACE/state"
 
-      - name: Build what the PR changed
-        run: cd analytics && uv run dbt build -s state:modified+ --defer --state ../state
+      - name: Build what the PR changed (across all teams)
+        run: |
+          if [ -f state/manifest.json ]; then
+            uv run dbt build -s state:modified+ --defer --state state
+          else
+            uv run dbt build   # no manifest of main to compare with: build everything
+          fi

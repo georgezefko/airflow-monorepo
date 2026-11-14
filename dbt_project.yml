@@ -1,0 +1,27 @@
+name: warehouse
+version: '1.0.0'
+profile: warehouse
+
+# One dbt project for every team, so ref() and lineage work across teams. Each team keeps its
+# models in teams/<team>/dbt/. Shared macros must stay outside those folders: dbt reads every .sql
+# file in a model path as a model.
+model-paths: ["teams/platform/dbt", "teams/sales/dbt", "teams/marketing/dbt"]
+macro-paths: ["macros"]
+
+clean-targets: ["target", "dbt_packages"]
+
+flags:
+  send_anonymous_usage_stats: false
+
+query-comment:
+  comment: "{{ tojson({'node_id': node.unique_id if node else none, 'target_name': target.name, 'events_strategy': var('events_strategy', 'merge')}) }}"
+  job-label: true
+
+# The dataset comes from the team folder (macros/generate_schema_name.sql): teams/sales/dbt/ builds
+# into analytics_sales. +schema overrides it, as staging does.
+models:
+  warehouse:
+    +materialized: table
+    staging:
+      +schema: staging
+      +materialized: view

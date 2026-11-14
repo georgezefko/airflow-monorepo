@@ -6,8 +6,8 @@ schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio).
 | Step | Status |
 |---|---|
 | 1. Conventional PR titles, squash merges | Done |
-| 2. One folder per team (`teams/<team>/{dags,dbt}`) | Planned |
-| 3. Build only the teams that changed | Planned: today one `dbt` image is built for the whole repo |
+| 2. One folder per team (`teams/<team>/`), one dbt project | Done |
+| 3. Dev: a dbt image per merge | Done; the manifest upload to GCS is planned |
 | 4. release-please: a release PR per team | Planned |
 | 5. Promote a release to prod | Planned |
 
@@ -25,6 +25,34 @@ schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio).
 
 No team waits for another: dev takes every merge, and each team decides when its own code reaches
 prod.
+
+## Repository layout
+
+Everything a team owns is in one folder, so a team's release covers exactly that folder.
+
+```
+dbt_project.yml  profiles.yml   one dbt project, "warehouse", owned by platform
+macros/                         shared dbt macros
+plugins/dbt_team_dag.py         shared DAG helper
+tests/                          DAG rules for every team, run once per team
+teams/
+  platform/  dags/  dbt/        staging models, read by every team
+  sales/     dags/  dbt/
+  marketing/ dags/  dbt/
+```
+
+- **One dbt project, models in team folders.** `ref()` and lineage work across teams, and a
+  platform PR that changes `stg_orders` rebuilds sales' and marketing's models in CI. The dataset
+  comes from the folder: `teams/sales/dbt/` builds into `analytics_sales`.
+- **One DAG bundle per team**, reading only `teams/<team>/dags/`. A team's DAG runs only its own
+  models (`path:teams/<team>/dbt`).
+- **Shared files stay outside `teams/`.** Platform owns them. They belong to no team's release, so
+  a change to them reaches prod with each team's next release.
+- **Later:** `teams/<team>/apps/<app>/` for containerised apps (shared apps go under `platform`),
+  `teams/<team>/sql/` for plain queries and `teams/<team>/tests/` for team-specific tests.
+
+Adding a team: create `teams/<team>/dags` and `teams/<team>/dbt`, add the folder to `model-paths`
+in `dbt_project.yml` and add a DAG bundle for it.
 
 ## 1. PR titles
 
@@ -96,9 +124,10 @@ the squash method and requires the `checks` and `pr-title` status checks.
 
 ## 3. Dev: every merge
 
-`build.yaml` runs on every push to `main` that changes dbt code. It builds the dbt image, tags it
-with the commit SHA and pushes it to Artifact Registry. Then it writes the manifest to GCS. Image
-tags can't be overwritten, so a SHA always means the same image. How CI signs in:
+`build.yaml` runs on every push to `main` that changes dbt code. It builds one dbt image with every
+team's models, tags it with the commit SHA and pushes it to Artifact Registry. Image tags can't be
+overwritten, so a SHA always means the same image. Each team's prod release later pins the image
+of its release commit, and that team's DAG runs only its own models from it. How CI signs in:
 [`ci-gcp-auth.md`](ci-gcp-auth.md) and [`gcp-setup.md`](gcp-setup.md).
 
 DAG-only changes don't build an image. Airflow reads DAG code from git.

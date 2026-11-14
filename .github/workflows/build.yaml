@@ -3,7 +3,13 @@ name: Build
 on:
   push:
     branches: [main]
-    paths: ['analytics/**', '.github/workflows/build.yaml']
+    paths:  # everything that goes into the dbt image
+      - 'dbt_project.yml'
+      - 'profiles.yml'
+      - 'macros/**'
+      - 'teams/*/dbt/**'
+      - 'dbt.Dockerfile*'
+      - '.github/workflows/build.yaml'
 
 jobs:
   dbt-image:
@@ -23,4 +29,4 @@ jobs:
       - name: Log in to Artifact Registry
         run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
       - name: Build and push
-        run: docker build -t "$IMAGE" analytics && docker push "$IMAGE"
+        run: docker build -f dbt.Dockerfile -t "$IMAGE" . && docker push "$IMAGE"
