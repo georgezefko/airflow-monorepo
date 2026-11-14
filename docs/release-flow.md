@@ -8,7 +8,7 @@ schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio).
 | 1. Conventional PR titles, squash merges | Done |
 | 2. One folder per team (`teams/<team>/`), one dbt project | Done |
 | 3. Dev: a dbt image per merge | Done; the manifest upload to GCS is planned |
-| 4. release-please: a release PR per team | Planned |
+| 4. release-please: a release PR per team | In progress |
 | 5. Promote a release to prod | Planned |
 
 ## The short version
@@ -139,15 +139,46 @@ each team folder it reads the commits since the team's last tag that changed fil
 It routes by path, not by scope. If it finds a `feat`, `fix`, `perf`, `revert` or breaking change, it opens
 or updates that team's release PR, which:
 
-- bumps the team's version in `.release-please-manifest.json`;
+- bumps the team's version in `.release-please-manifest.json` and `teams/<team>/version.txt`;
 - adds entries to `teams/<team>/CHANGELOG.md`.
 
-Merging the release PR creates the tag (`sales-v1.5.0`) and a GitHub release with the same
-notes. Until then, more merges just update the PR.
+The release PR is titled `chore(<team>): release <version>`, which passes the PR title check.
+Merging it creates the tag (`sales-v1.5.0`) and a GitHub release with the same notes. Until then,
+more merges just update the PR. A version means "ready for prod"; every merge already runs in dev
+by its commit SHA.
+
+| File | What it holds |
+|---|---|
+| [`release-please-config.json`](../release-please-config.json) | One package per team folder; one release PR each |
+| [`.release-please-manifest.json`](../.release-please-manifest.json) | Each team's current version, updated by release PRs |
+| [`release-please.yaml`](../.github/workflows/release-please.yaml) | Runs release-please on every push to `main` |
+
+`bootstrap-sha` in the config is the commit that created `teams/`. release-please ignores older
+commits, whose titles weren't conventional yet. Every team starts at 1.0.0.
+
+### The GitHub App
 
 release-please needs a GitHub App token, not the built-in `GITHUB_TOKEN`. GitHub doesn't run
 workflows for PRs and tags created with `GITHUB_TOKEN`, so the release PR would never get the
 required checks and couldn't be merged.
+
+One-time setup, by a repository admin:
+
+1. Create the App at https://github.com/settings/apps/new: no webhook, installable only on this
+   account, with repository permissions **Contents**, **Pull requests** and **Issues** set to
+   read and write (issues covers the labels release-please puts on release PRs).
+2. Install it on this repository only (**Install App** → **Only select repositories**).
+3. Generate a private key on the App's page, store it and the App's **Client ID**, then delete
+   the downloaded key:
+
+   ```bash
+   gh variable set RELEASE_APP_CLIENT_ID --body <client id>
+   gh secret set RELEASE_APP_PRIVATE_KEY < <app-name>.<date>.private-key.pem
+   rm <app-name>.<date>.private-key.pem
+   ```
+
+The workflow exchanges the key for a token that's valid for one hour and only for this
+repository.
 
 ## 5. Prod: one team at a time
 

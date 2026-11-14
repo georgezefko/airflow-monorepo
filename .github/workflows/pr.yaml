@@ -53,15 +53,7 @@ jobs:
           service_account: ci-dbt@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
 
       - name: Manifest of main (what's in analytics_*)
-        run: |
-          # ponytail: skipped while main still has the old analytics/ layout; remove once it's merged
-          [ -f base/dbt_project.yml ] || exit 0
-          cd base && DBT_DATASET=analytics uv run --project "$GITHUB_WORKSPACE" dbt parse --target-path "$GITHUB_WORKSPACE/state"
+        run: cd base && DBT_DATASET=analytics uv run --project "$GITHUB_WORKSPACE" dbt parse --target-path "$GITHUB_WORKSPACE/state"
 
       - name: Build what the PR changed (across all teams)
-        run: |
-          if [ -f state/manifest.json ]; then
-            uv run dbt build -s state:modified+ --defer --state state
-          else
-            uv run dbt build   # no manifest of main to compare with: build everything
-          fi
+        run: uv run dbt build -s state:modified+ --defer --state state
