@@ -70,10 +70,14 @@ gcloud iam service-accounts create ci-build --project $P --display-name "CI imag
 gcloud artifacts repositories add-iam-policy-binding airflow-monorepo --project $P --location $REGION \
   --member serviceAccount:$SA --role roles/artifactregistry.writer
 
+# The subject GitHub puts in tokens from this repository (see the note below)
+SUB_PREFIX=$(gh api repos/$REPO/actions/oidc/customization/sub -q .sub_claim_prefix)
+# repo:georgezefko@46191927/airflow-monorepo@1443457357
+
 # Only runs on main
 gcloud iam service-accounts add-iam-policy-binding $SA --project $P \
   --role roles/iam.workloadIdentityUser \
-  --member "principal://iam.googleapis.com/$POOL/subject/repo:$REPO:ref:refs/heads/main"
+  --member "principal://iam.googleapis.com/$POOL/subject/$SUB_PREFIX:ref:refs/heads/main"
 ```
 
 The two bindings differ on purpose. `ci-dbt` uses `principalSet://…/attribute.repository/…`, which
@@ -81,8 +85,15 @@ matches every run from the repository, because PR branches need it. `ci-build` u
 `principal://…/subject/…`, which matches exactly one GitHub subject: runs on `main`. A PR can edit
 its workflow to ask for `ci-build`, but GCP refuses the token.
 
-GitHub changes the subject to `repo:<repo>:environment:<name>` when a job sets `environment:`. If
-`build.yaml` ever gets an environment, update this binding to match.
+The subject isn't `repo:georgezefko/airflow-monorepo:…`. The repository uses GitHub's immutable
+subject (`use_immutable_subject: true`), which adds the owner and repository IDs, so a renamed or
+re-created repository with the same name can't match. Always read the prefix from the API, as
+above; a binding with the plain name fails with `Permission 'iam.serviceAccounts.getAccessToken'
+denied`. `ci-dbt` isn't affected because it matches `attribute.repository`, which stays the plain
+name.
+
+GitHub ends the subject with `:environment:<name>` instead of `:ref:refs/heads/main` when a job
+sets `environment:`. If `build.yaml` ever gets an environment, update this binding to match.
 
 ## Checking the setup
 
