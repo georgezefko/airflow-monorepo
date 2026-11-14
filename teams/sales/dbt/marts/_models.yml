@@ -1,6 +1,6 @@
 models:
   - name: daily_orders
-    description: One row per day with order counts.
+    description: One row per day with order counts, by the date the order was created (UTC).
     columns:
       - name: order_date
         description: Date the orders were created. Primary key of the model.
