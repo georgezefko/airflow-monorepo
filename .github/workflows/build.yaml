@@ -19,9 +19,12 @@ jobs:
     permissions: {contents: read, id-token: write}
     env:
       REGISTRY: us-central1-docker.pkg.dev
-      IMAGE: us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow:${{ github.sha }}
+      REPO: us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow
     steps:
       - uses: actions/checkout@v4
+      # Tag <airflow version>-<short sha>, e.g. 3.3.2-d746796: unique per commit, and says which Airflow it runs.
+      - id: tag
+        run: echo "tag=$(sed -n 's|^FROM apache/airflow:||p' Dockerfile)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -30,5 +33,13 @@ jobs:
           token_format: access_token
       - name: Log in to Artifact Registry
         run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
+      # Multi-arch so the same tag runs on GKE (amd64) and a Mac's kind node (arm64).
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
       - name: Build and push
-        run: docker build -t "$IMAGE" . && docker push "$IMAGE"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REPO }}:${{ steps.tag.outputs.tag }}
