@@ -1,4 +1,7 @@
-# The Airflow image only needs plugins/; everything else (DAGs, dbt models) comes from git bundles
+# The Airflow image needs plugins/ and the dbt lock; everything else (DAGs, dbt models) comes from
+# git bundles
 *
 !plugins/
+!pyproject.toml
+!uv.lock
 **/__pycache__
