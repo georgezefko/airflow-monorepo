@@ -1,7 +1,8 @@
 # Release flow
 
 How a change gets from a PR to dev, and from dev to prod, with each team releasing on its own
-schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio).
+schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio). What a deployment needs
+from this repo (image, bundles, environment): [`deployment.md`](deployment.md).
 
 | Step | Status |
 |---|---|
