@@ -21,3 +21,13 @@ models:
           - not_null
       - name: revenue
         description: Total sale price of the items created that day.
+  - name: weekly_revenue
+    description: One row per week (starting Monday) with revenue, from daily_revenue.
+    columns:
+      - name: week_start
+        description: Monday of the week. Primary key of the model.
+        data_tests:
+          - unique
+          - not_null
+      - name: revenue
+        description: Total revenue for the week.
