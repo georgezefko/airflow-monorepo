@@ -2,7 +2,8 @@
 
 How a change gets from a PR to dev, and from dev to prod, with each team releasing on its own
 schedule. Diagram: [`diagrams/deploy-flow.drawio`](diagrams/deploy-flow.drawio). What a deployment needs
-from this repo (image, bundles, environment): [`deployment.md`](deployment.md).
+from this repo (image, bundles, environment): [`deployment.md`](deployment.md). What has been
+tried on `kind` so far: [`tested-scenarios.md`](tested-scenarios.md).
 
 | Step | Status |
 |---|---|
@@ -126,7 +127,33 @@ title, which is what release-please reads.
 
 Repository settings (General → Pull Requests): squash merging only, default message "Pull request
 title and description", and "Automatically delete head branches". The `main` ruleset allows only
-the squash method and requires the `checks` and `pr-title` status checks.
+the squash method and requires the `checks` and `pr-title` status checks, with "Require branches
+to be up to date before merging" on.
+
+### Conflicts between PRs
+
+Two PRs that change the same file only conflict when they change the same or neighbouring lines.
+Team folders keep that rare: teams don't edit each other's files, so conflicts are within one team.
+
+- **The common one: two columns added at the end of a model.** Both PRs add a comma to the last
+  column and a line after it:
+
+  ```sql
+      delivered_at,      -- PR A and PR B both change this line
+      num_of_item        -- PR A
+      returned_at        -- PR B
+  ```
+
+  Whoever merges second rebases on `main`, keeps both columns and pushes; CI runs again.
+  Adding columns where they belong rather than always at the end spreads edits out.
+- **The one git can't see.** PR A renames a column, PR B starts using the old name. Both pass CI
+  on their own and break `main` together. That's why the ruleset requires an up-to-date branch:
+  after A merges, GitHub blocks B until it's rebased on `main` and CI passes again, now with A
+  in it.
+
+Requiring up-to-date branches costs a rebase and a CI run each time `main` moves. With many PRs
+merging a day, a merge queue does that rebasing and testing instead. Release PRs aren't affected:
+release-please rewrites its PR on every push to `main`.
 
 ## 3. Dev: every merge
 

@@ -77,6 +77,41 @@ The BigQuery datasets keep their names in every environment (`analytics_staging`
 
 dbt's profile uses `method: oauth`, which picks up either, so nothing changes in this repo.
 
+## Task logs
+
+With the KubernetesExecutor, each task runs in its own pod, and the pod is deleted when the task
+ends. Without remote logging the UI can't read a finished task's log: it shows `Could not read
+served logs … Failed to resolve '<pod name>'`. With remote logging, each task uploads its log to
+GCS when it ends, and the UI reads it from there.
+
+**1. Create the bucket, once per GCP project.** Logs are deleted after 30 days:
+
+```bash
+P=project-09344e23-c1cd-49df-a40
+gcloud storage buckets create gs://$P-airflow-logs --project=$P --location=US --uniform-bucket-level-access
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":30}}]}' > /tmp/lifecycle.json
+gcloud storage buckets update gs://${P}-airflow-logs --lifecycle-file=/tmp/lifecycle.json
+```
+
+**2. Turn it on per environment**, in that environment's values, one folder each:
+
+```yaml
+config:
+  logging:
+    remote_logging: "True"
+    remote_base_log_folder: gs://project-09344e23-c1cd-49df-a40-airflow-logs/dev   # /prod for prod
+```
+
+- **No connection needed.** Without `remote_log_conn_id`, the GCS handler uses the same
+  credentials as dbt: the ADC file on `kind`, Workload Identity on GKE. The official image
+  already includes the Google provider.
+- **Restarts take a while.** Changing the config restarts every component. On `kind` the API
+  server takes minutes to start, so a few `Startup probe failed … connection refused` events are
+  normal. It's only a problem if the pod keeps restarting.
+
+**3. Check it.** Run any task and open its log in the UI. The file is in
+`gs://<project>-airflow-logs/<env>/dag_id=<dag>/run_id=<run>/task_id=<task>/`.
+
 ## What changes per release
 
 | Event | Change in the data platform repo |
