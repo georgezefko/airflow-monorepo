@@ -11,6 +11,8 @@ models:
         description: Total orders from users of this source, including cancelled orders.
       - name: customers
         description: Distinct users of this source who placed an order.
+      - name: orders_per_customer
+        description: Orders divided by customers, rounded to two decimals.
   - name: fct_events
     description: One row per website event, built incrementally. The subject of the strategy experiment.
     columns:
