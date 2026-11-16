@@ -13,6 +13,7 @@ bundles track `main`, and prod's bundles track team tags. Each DAG shows its tea
 | 5 | Merged but not released | #21, #22 | Dev has it, prod doesn't, until the release |
 | 6 | Two changes in one release | #23, #25, #24 | One release PR, 1.1.0, both changes |
 | 7 | Up-to-date branches required | #25, #26 | Second PR blocked until updated |
+| 8 | Spike: shared code imported from each bundle's own checkout | none (branch `spike/platform-lib`) | Each bundle got its own ref's version |
 
 ## 1. Shared code ships in the image
 
@@ -77,6 +78,37 @@ The `main` ruleset now has "Require branches to be up to date before merging" on
 were open at the same time; after #25 merged, #26 was out of date and had to be updated with
 `main` and pass CI again before it could merge. Why: [Conflicts between
 PRs](release-flow.md#conflicts-between-prs).
+
+## 8. Spike: shared code imported from each bundle's own checkout
+
+**Question:** can the DAG helpers move out of the image (`plugins/`) into `teams/platform/lib/`,
+with each team's DAG importing them from its own bundle checkout?
+
+**Setup:**
+- `teams/platform/lib/hello.py` stood in for the helpers: `VERSION = "1"` at tag `spike-v1`, and
+  `"2"` on the branch.
+- Two temporary dev bundles ran the same DAG: `spike_a` on the tag, `spike_b` on the branch.
+- Each DAG tried `import hello` with no setup, then added `<repo root>/teams/platform/lib` to
+  `sys.path` and imported it again.
+
+**Result (in the task pods):**
+
+| | spike_a (tag `spike-v1`) | spike_b (branch) |
+|---|---|---|
+| Import with no setup | Fails: `No module named 'hello'` | Fails |
+| `hello_version` | `1` | `2` |
+| `hello_file` | `…/dag_bundles/spike_a/versions/b712ed4…/teams/platform/lib/hello.py` | `…/dag_bundles/spike_b/versions/172ecbc…/teams/platform/lib/hello.py` |
+
+**What it shows:**
+- **The checkout is the whole repo.** Each bundle version is a full checkout at
+  `dag_bundles/<bundle>/versions/<sha>/`, so `teams/platform/lib` is there at the team's own ref.
+- **Only the DAG folder is importable.** `sys.path` gets `…/teams/<team>/dags` and not the repo
+  root, so the helpers need one path setup line.
+- **Versions don't mix.** Two bundles in one cluster import different versions of the same module.
+  A team's tag pins the helpers it was tested with.
+- **`/opt/airflow/plugins` comes before the bundle on `sys.path`.** While the image still has
+  `plugins/dbt_team_dag.py`, the path setup must insert at position 0, or the image's copy wins.
+  Remove `plugins/` from the image once the helpers have moved.
 
 ## Not tested yet
 
