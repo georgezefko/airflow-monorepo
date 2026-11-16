@@ -17,6 +17,8 @@ models:
         description: Timestamp when the order was shipped; null if not shipped yet.
       - name: delivered_at
         description: Timestamp when the order was delivered; null if not delivered yet.
+      - name: num_of_item
+        description: Number of items in the order.
   - name: stg_order_items
     description: One row per item in an order.
     columns:
