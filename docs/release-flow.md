@@ -282,6 +282,47 @@ teams' bundles keep their own refs.
 
 The Airflow image is shared by every team and promoted separately, by platform.
 
+Each DAG has its team's version as a tag (`v1.5.0`), read from `teams/<team>/version.txt` in the
+bundle's checkout, so the Airflow UI shows which release every team runs in each environment.
+
+### A team's first tag
+
+A team that has never had a release PR merged, like platform and marketing at 1.0.0, has no tag
+for prod to point at. Create it once by hand, on the commit that is 1.0.0:
+
+```bash
+git tag marketing-v1.0.0 origin/main
+git push origin marketing-v1.0.0
+```
+
+After that, release-please creates every tag.
+
+### Shared code ships in the image, not a tag
+
+`plugins/`, the `Dockerfile` and the dbt version (`uv.lock`) are outside `teams/`, so they belong
+to no team's release and release-please opens no release PR for them. A change there builds a new
+Airflow image: platform sets it in dev, then in prod. No team's `tracking_ref` changes.
+
+Every team runs on that one image, whatever its tag. A helper change must therefore work with every
+team's released code, including the older tags prod still runs.
+
+## Known limits
+
+- **No dbt manifest is stored.** Airflow runs `dbt ls` on each bundle's checkout when it parses
+  the DAG, and Cosmos caches the result per bundle version. CI runs `dbt parse` on `main` to get
+  the manifest it compares with. Nothing goes to GCS.
+- **CI compares with dev, not prod.** The slim build (`state:modified+ --defer`) defers to `main`'s
+  manifest and the `analytics_*` tables dev builds. It proves the change builds on top of `main`, not
+  that it works with the older team releases prod runs.
+- **Within an environment, teams share tables.** In prod, sales on an old tag reads the staging
+  tables that platform's current prod release builds. A tag pins code, not data: sales' checkout
+  contains the staging SQL from its own commit, but sales' DAG builds only `teams/sales/dbt`, so
+  `ref('stg_orders')` just names the table platform's prod release built.
+- **A renamed model fails silently.** dbt doesn't drop the old table, so a team still on an old tag
+  keeps reading it and runs green on data that stopped updating. Drop the old table only after
+  every team's prod release has moved to the new name. That's why breaking changes need the steps in
+  [Breaking changes between teams](#breaking-changes-between-teams).
+
 ## Hotfixes and rollbacks
 
 This is trunk-based development: short-lived branches, `main` always deployable, releases cut by
