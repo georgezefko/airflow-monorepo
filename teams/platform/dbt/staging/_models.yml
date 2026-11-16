@@ -13,6 +13,10 @@ models:
         description: Current status of the order, such as Cancelled.
       - name: created_at
         description: Timestamp when the order was created.
+      - name: shipped_at
+        description: Timestamp when the order was shipped; null if not shipped yet.
+      - name: delivered_at
+        description: Timestamp when the order was delivered; null if not delivered yet.
   - name: stg_order_items
     description: One row per item in an order.
     columns:
