@@ -40,5 +40,5 @@ def team_dag(team, schedule):
         schedule=schedule,
         start_date=datetime(2026, 1, 1),
         catchup=False,
-        tags=[team, "dbt"],
+        tags=[team, "dbt", "v" + (project / "teams" / team / "version.txt").read_text().strip()],
     )
