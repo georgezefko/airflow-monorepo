@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/georgezefko/airflow-monorepo/compare/marketing-v1.1.0...marketing-v1.2.0) (2026-11-17)
+
+
+### Features
+
+* **marketing:** orders per traffic source from BigQuery to Postgres with apps ([#34](https://github.com/georgezefko/airflow-monorepo/issues/34)) ([f9d5d55](https://github.com/georgezefko/airflow-monorepo/commit/f9d5d55a96f1301f259baaa4722b90e1cc5dac30))
+
 ## [1.1.0](https://github.com/georgezefko/airflow-monorepo/compare/marketing-v1.0.0...marketing-v1.1.0) (2026-11-16)
 
 
