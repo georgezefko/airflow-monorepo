@@ -40,7 +40,9 @@ teams/
   platform/  dags/  dbt/        staging models, read by every team
              lib/               shared DAG helpers, imported by every team's DAGs
              apps/common/       shared containerised apps (bq-extract, pg-load)
-  sales/     dags/  dbt/
+  sales/     dags/  dbt/        sales_dbt, and sales_to_postgres (an app DAG)
+             apps/transform/    sales' own app
+             sql/               queries and DDL the app DAG passes to the common apps
   marketing/ dags/  dbt/
 ```
 
@@ -63,7 +65,9 @@ teams/
   `uv.lock`. Shared apps are platform's, in `teams/platform/apps/common/`. An image's tag is a hash
   of its folder, so a team's tag pins the images too (see
   [`deployment.md`](deployment.md#app-images)).
-- **Later:** `teams/<team>/sql/` for plain queries and `teams/<team>/tests/` for team-specific tests.
+- **`teams/<team>/sql/`** holds queries that DAGs pass to apps, e.g. sales' extract for
+  `bq-extract`. A query change is a team release; no image is built.
+- **Later:** `teams/<team>/tests/` for team-specific tests.
 
 Adding a team: create `teams/<team>/dags` and `teams/<team>/dbt`, add the folder to `model-paths`
 in `dbt_project.yml` and add a DAG bundle for it.
