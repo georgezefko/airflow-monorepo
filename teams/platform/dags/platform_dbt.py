@@ -1,6 +1,12 @@
+import sys
+from pathlib import Path
+
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import Asset
-from dbt_team_dag import team_dag
+
+# Platform's DAG helpers, from this bundle's own checkout (pinned by this team's tag)
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "teams" / "platform" / "lib"))
+from dbt_team_dag import team_dag  # noqa: E402
 
 STAGING_READY = Asset("analytics_staging_ready")
 

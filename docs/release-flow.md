@@ -35,10 +35,10 @@ Everything a team owns is in one folder, so a team's release covers exactly that
 ```
 dbt_project.yml  profiles.yml   one dbt project, "warehouse", owned by platform
 macros/                         shared dbt macros
-plugins/dbt_team_dag.py         shared DAG helper
 tests/                          DAG rules for every team, run once per team
 teams/
   platform/  dags/  dbt/        staging models, read by every team
+             lib/               shared DAG helpers, imported by every team's DAGs
   sales/     dags/  dbt/
   marketing/ dags/  dbt/
 ```
@@ -51,8 +51,11 @@ teams/
   team's DAG runs dbt from that same checkout and selects only its own models
   (`path:teams/<team>/dbt`), so DAGs, models and SQL always come from one commit.
 - **What's an image and what isn't.** Teams' DAGs, dbt models and SQL are never in an image; they
-  come from the bundle. The only images are platform's Airflow image (Airflow, Cosmos, the dbt CLI
-  and `plugins/`) and, later, containerised apps.
+  come from the bundle. The only images are platform's Airflow image (Airflow, Cosmos and the dbt
+  CLI) and, later, containerised apps.
+- **Shared DAG helpers are in `teams/platform/lib/`, not the image.** Each team's DAG imports them
+  from its own checkout, so a team's tag pins the helpers it was tested with, and a rollback brings
+  them back too.
 - **Shared files stay outside `teams/`.** Platform owns them. They belong to no team's release, so
   a change to them reaches prod with each team's next release.
 - **Later:** `teams/<team>/apps/<app>/` for containerised apps (shared apps go under `platform`),
@@ -324,14 +327,37 @@ git push origin marketing-v1.0.0
 
 After that, release-please creates every tag.
 
-### Shared code ships in the image, not a tag
+### Shared code: pinned by each team's tag, or in the image
 
-`plugins/`, the `Dockerfile` and the dbt version (`uv.lock`) are outside `teams/`, so they belong
-to no team's release and release-please opens no release PR for them. A change there builds a new
-Airflow image: platform sets it in dev, then in prod. No team's `tracking_ref` changes.
+| Shared code | Ships in | Who decides when it reaches prod |
+|---|---|---|
+| DAG helpers (`teams/platform/lib/`) | Every team's bundle checkout | Each team, with its next release |
+| Shared apps (`teams/platform/apps/`, later) | Every team's bundle checkout | Each team, with its next release |
+| Airflow, Cosmos, the dbt CLI (`Dockerfile`, `uv.lock`) | The Airflow image | Platform, for every team at once |
 
-Every team runs on that one image, whatever its tag. A helper change must therefore work with every
-team's released code, including the older tags prod still runs.
+**Helpers.** Each team's DAG adds `teams/platform/lib` from its own checkout to `sys.path`:
+
+```python
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "teams" / "platform" / "lib"))
+from dbt_team_dag import team_dag  # noqa: E402
+```
+
+Prod sales on `sales-v1.2.0` uses the helpers as they were at that tag, even after platform
+changes them. A helper change reaches sales with sales' next release, after sales' CI and dev have
+run it. It's listed in platform's changelog (the file is under `teams/platform`), not in the
+changelogs of the teams that pick it up. Platform can't push an urgent helper fix to everyone:
+each team has to release.
+
+**The image.** `Dockerfile` and `uv.lock` are outside `teams/`, so release-please opens no release
+PR for them. A change there builds a new Airflow image: platform sets it in dev, then in prod. No
+team's `tracking_ref` changes. Every team runs on that one image, whatever its tag, so an upgrade
+of Cosmos or Airflow must still work with the helpers in older tags that prod runs.
+
+**`plugins/` is legacy.** Tags from before the move (`*-v1.1.0` and older) import the helper from
+the image's `/opt/airflow/plugins`. It stays in the image until every team's prod tag includes the
+move, then `plugins/` and its `COPY` line in the `Dockerfile` are deleted. The `sys.path.insert(0,
+…)` makes the checkout's copy win in the meantime; `test_helpers_come_from_the_checkout_not_the_image`
+checks it.
 
 ## Known limits
 
