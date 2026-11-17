@@ -136,7 +136,7 @@ with each team's DAG importing them from its own bundle checkout?
 **Saw:** the merge conflicted in `.release-please-manifest.json` (adjacent lines) and kept
 `main`'s side. `platform-v1.2.0` was tagged and released, but the manifest stayed at `1.1.0`, so
 release-please opened "release 1.2.0" for platform again (#33). Fixed by setting the manifest to
-`1.2.0` (#36) and closing #33. Lesson: [never update release PRs by
+`1.2.0` (#36) and closing #33. Prevention: `always-update` (#37). See [never update release PRs by
 hand](release-flow.md#conflicts-between-prs).
 
 ## Not tested yet

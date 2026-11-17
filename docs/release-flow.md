@@ -165,14 +165,21 @@ Team folders keep that rare: teams don't edit each other's files, so conflicts a
 Requiring up-to-date branches costs a rebase and a CI run each time `main` moves. With many PRs
 merging a day, a merge queue does that rebasing and testing instead.
 
-**Release PRs: never update them by hand.** release-please rewrites every open release PR from
-`main` on each push to `main`, so after one merges, wait for the Release workflow to finish and the
-others are up to date. Don't press "Update branch" or merge `main` into them. Each release PR
-changes its own line of `.release-please-manifest.json`, and those lines are adjacent, so a
-manual merge conflicts there. That happened with platform 1.2.0: the conflict was resolved by
-keeping `main`'s side, so the tag `platform-v1.2.0` was created, but the manifest stayed at
-`1.1.0`. release-please reads the last version from the manifest, so it opened platform 1.2.0
-again. The fix was a `chore` PR that set the manifest to `1.2.0`, and closing the duplicate.
+**Release PRs: never update them by hand.** Each release PR changes its own line of
+`.release-please-manifest.json`, and those lines are adjacent, so merging `main` into one by hand
+conflicts there. That happened with platform 1.2.0: after sales' release merged, release-please
+left platform's release PR as it was (its changelog hadn't changed), so it was behind `main` and
+the up-to-date rule blocked it. `main` was merged in by hand, the conflict was resolved by keeping
+`main`'s side, and platform's line was lost: `platform-v1.2.0` was tagged, but the manifest
+stayed at `1.1.0`, so release-please opened platform 1.2.0 again.
+
+- **Prevention:** `"always-update": true` in `release-please-config.json`. release-please rebuilds
+  every open release PR from `main` on each push, so they're never behind `main`. After one
+  release merges, wait for the Release workflow; the others are up to date.
+- **If you must resolve it by hand:** keep both sides. Other teams' lines from `main`, and this
+  PR's own line. Never take one side of the whole file.
+- **If a line was already lost:** a `chore` PR that sets the manifest to the released version,
+  then close the duplicate release PR.
 
 ## 3. Dev: every merge
 
