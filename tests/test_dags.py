@@ -61,3 +61,10 @@ def test_app_tasks_run_this_checkouts_images(team_dags):
         for task in dag.tasks:
             if hasattr(task, "image"):
                 assert task.image in this_checkout, f"{dag_id}.{task.task_id} runs {task.image}"
+
+
+def test_version_chip_is_the_release_or_the_configured_tag(team_dags, monkeypatch):
+    version = "v" + (team_dags.parent / "version.txt").read_text().strip()
+    assert all(version in dag.tags for dag in dag_bag(team_dags).dags.values())
+    monkeypatch.setenv("AIRFLOW__PLATFORM__VERSION_TAG", "main")  # what dev sets
+    assert all("main" in dag.tags and version not in dag.tags for dag in dag_bag(team_dags).dags.values())

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from cosmos import DbtDag, ExecutionConfig, LoadMode, ProfileConfig, ProjectConfig, RenderConfig
 from cosmos.constants import InvocationMode
+from version_tag import version_tag
 
 DBT = "/home/airflow/dbt-venv/bin/dbt"
 
@@ -40,5 +41,5 @@ def team_dag(team, schedule):
         schedule=schedule,
         start_date=datetime(2026, 1, 1),
         catchup=False,
-        tags=[team, "dbt", "v" + (project / "teams" / team / "version.txt").read_text().strip()],
+        tags=[team, "dbt", version_tag(project / "teams" / team)],
     )
