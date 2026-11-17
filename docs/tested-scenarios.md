@@ -126,7 +126,8 @@ with each team's DAG importing them from its own bundle checkout?
 - After loading, extract → transform → load ran; the pod spec in the task log shows the image
   tags, `config.apps.data_folder` and the mounted credentials.
 - The version chip showed `v1.1.0` while the sales 1.2.0 release PR was open: dev runs `main`, the
-  chip is the last release (see [release-flow.md](release-flow.md#5-prod-one-team-at-a-time)).
+  chip is the last release. Dev now shows `main` instead (#38, see
+  [release-flow.md](release-flow.md#5-prod-one-team-at-a-time)).
 
 ## 10. Two release PRs merged one after the other
 

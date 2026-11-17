@@ -338,14 +338,14 @@ The Airflow image is shared by every team and promoted separately, by platform.
 Each DAG has its team's version as a tag (`v1.5.0`), read from `teams/<team>/version.txt` in the
 bundle's checkout, so the Airflow UI shows which release every team runs in each environment.
 
-**In dev, the chip shows the last release, not what's running.** `version.txt` only changes when
-the release PR is merged. While sales' release PR for 1.2.0 is open, dev already runs the code
-that will be 1.2.0 (dev runs `main`), but its DAGs still show `v1.1.0`. After the release PR is
-merged, they show `v1.2.0`. In prod the chip is exact: the tag and `version.txt` are the same
-commit.
+**In dev, the chip is `main`.** Dev runs `main`, which is usually ahead of the last release:
+while sales' release PR for 1.2.0 was open, dev already ran that code but showed `v1.1.0`. So dev
+sets `config.platform.version_tag: main` ([`deployment.md`](deployment.md#environment)), and its
+DAGs show `main`. The exact commit of each run is its bundle version in the Airflow UI. In prod the
+chip is the version: the tag and `version.txt` are the same commit.
 
-So merging the release PR doesn't change what dev runs. It marks the code on `main` as a release:
-it creates the tag prod can point at and the changelog, and updates the chip.
+Merging a release PR doesn't change what dev runs. It marks the code on `main` as a release: it
+creates the tag prod can point at and the changelog.
 
 ### A team's first tag
 
