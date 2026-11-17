@@ -36,6 +36,14 @@ def test_airflow_discovers_every_dag(team_dags):
     assert set(dag_bag(team_dags, safe_mode=True).dags) == set(dag_bag(team_dags).dags)
 
 
+def test_helpers_come_from_the_checkout_not_the_image(team_dags):
+    # The image still has an old copy in /opt/airflow/plugins for older tags; it must not win
+    dag_bag(team_dags)
+    import dbt_team_dag
+
+    assert Path(dbt_team_dag.__file__).parent == Path(__file__).parents[1] / "teams" / "platform" / "lib"
+
+
 def test_every_dag_runs_dbt_models(team_dags):
     for dag_id, dag in dag_bag(team_dags).dags.items():
         assert any("run" in task.task_id for task in dag.tasks), f"{dag_id} selects no dbt models"

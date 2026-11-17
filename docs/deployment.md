@@ -10,7 +10,7 @@ one folder per environment). This page is the contract between the two. How vers
 |---|---|
 | Image | `us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow:<airflow version>-<short sha>`, e.g. `airflow:3.3.2-385e98c` |
 | Built by | [`build.yaml`](../.github/workflows/build.yaml), on every push to `main` that changes `Dockerfile`, `.dockerignore`, `plugins/`, `pyproject.toml` or `uv.lock` |
-| Contains | Airflow 3.3.2, Cosmos, the dbt CLI in `/home/airflow/dbt-venv/bin/dbt`, and `plugins/` (the shared DAG helper) |
+| Contains | Airflow 3.3.2, Cosmos, the dbt CLI in `/home/airflow/dbt-venv/bin/dbt`, and `plugins/`: a legacy copy of the DAG helper, kept for tags from before it moved to `teams/platform/lib/` ([why](release-flow.md#shared-code-pinned-by-each-teams-tag-or-in-the-image)) |
 | dbt version | Exactly what `uv.lock` pins, every package: the same dbt CI's slim build runs. Upgrade dbt with `pyproject.toml` and `uv lock` |
 | Doesn't contain | Teams' DAGs, dbt models and SQL: they come from the DAG bundles |
 | Tags | `<airflow version>-<short sha>` of the commit that built it. Tags are never overwritten, so a tag always means the same image |
