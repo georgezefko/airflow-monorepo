@@ -163,8 +163,16 @@ Team folders keep that rare: teams don't edit each other's files, so conflicts a
   in it.
 
 Requiring up-to-date branches costs a rebase and a CI run each time `main` moves. With many PRs
-merging a day, a merge queue does that rebasing and testing instead. Release PRs aren't affected:
-release-please rewrites its PR on every push to `main`.
+merging a day, a merge queue does that rebasing and testing instead.
+
+**Release PRs: never update them by hand.** release-please rewrites every open release PR from
+`main` on each push to `main`, so after one merges, wait for the Release workflow to finish and the
+others are up to date. Don't press "Update branch" or merge `main` into them. Each release PR
+changes its own line of `.release-please-manifest.json`, and those lines are adjacent, so a
+manual merge conflicts there. That happened with platform 1.2.0: the conflict was resolved by
+keeping `main`'s side, so the tag `platform-v1.2.0` was created, but the manifest stayed at
+`1.1.0`. release-please reads the last version from the manifest, so it opened platform 1.2.0
+again. The fix was a `chore` PR that set the manifest to `1.2.0`, and closing the duplicate.
 
 ## 3. Dev: every merge
 

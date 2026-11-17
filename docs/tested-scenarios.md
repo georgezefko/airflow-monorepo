@@ -128,6 +128,17 @@ with each team's DAG importing them from its own bundle checkout?
 - The version chip showed `v1.1.0` while the sales 1.2.0 release PR was open: dev runs `main`, the
   chip is the last release (see [release-flow.md](release-flow.md#5-prod-one-team-at-a-time)).
 
+## 10. Two release PRs merged one after the other
+
+**Did:** sales 1.2.0 (#31) and platform 1.2.0 (#29) were open together. #31 merged first, then
+`main` was merged into #29 by hand to bring it up to date.
+
+**Saw:** the merge conflicted in `.release-please-manifest.json` (adjacent lines) and kept
+`main`'s side. `platform-v1.2.0` was tagged and released, but the manifest stayed at `1.1.0`, so
+release-please opened "release 1.2.0" for platform again (#33). Fixed by setting the manifest to
+`1.2.0` (#36) and closing #33. Lesson: [never update release PRs by
+hand](release-flow.md#conflicts-between-prs).
+
 ## Not tested yet
 
 - Platform release 1.1.0 in prod: merge #24, move prod's platform bundle to `platform-v1.1.0`.
