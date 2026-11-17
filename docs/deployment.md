@@ -38,9 +38,10 @@ Each folder with a `Dockerfile` under `teams/<team>/apps/` is one image, run by 
   images, so the registry must keep them: its retention is how far back you can roll back.
 - **No image per branch.** PRs can't push (only `main` may act as `ci-build`). To try an app on
   `kind` before merging, build it locally with its tag and `kind load` it.
-- **On `kind`**, load the images after each merge, like the Airflow image: the data platform repo's
-  `scripts/app-images.sh` loads every app image of a checkout. For a team on an older tag, run it
-  on a checkout of that tag. CI can't do it: it can't reach a cluster on your machine.
+- **On `kind`**, load the images after each merge and after changing a `tracking_ref`:
+  `make airflow-image` in the data platform repo. App tags aren't in the values, so it computes
+  them from each `tracking_ref` in the values with that ref's `app_image.py`. CI can't do it: it
+  can't reach a cluster on your machine. GKE pulls the images itself.
 
 | App | Does | Arguments |
 |---|---|---|
@@ -175,7 +176,7 @@ config:
 | Event | Change in the data platform repo |
 |---|---|
 | Merge to `main` (any team) | Nothing: dev bundles track `main` |
-| An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release. On `kind`, load the new images (`scripts/app-images.sh` in the data platform repo) |
+| An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release. On `kind`, `make airflow-image` in the data platform repo |
 | Platform changes `Dockerfile`, `plugins/` or the dbt version (`uv.lock`) | Dev's image tag → the new `airflow:<airflow version>-<short sha>` |
 | A team releases, e.g. `sales-v1.0.2` | Prod: that team's `tracking_ref` → `sales-v1.0.2`, nothing else |
 | Rollback | Prod: the team's `tracking_ref` → its previous tag |

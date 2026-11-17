@@ -413,6 +413,35 @@ When prod is broken, move the team back to its previous release in the deploy re
 the sales bundle's `tracking_ref: sales-v1.4.0` instead of `sales-v1.5.0`. Nothing is built: the
 old tag still points at the same commit. Then fix calmly.
 
+### Rollback and app images
+
+A rollback brings back the app images too, and nothing has to record which image goes with which
+release: the tag is computed from the code. Prod sales moving from `sales-v1.2.0` back to
+`sales-v1.1.0`:
+
+1. The bundle checks out `sales-v1.1.0`: the whole repository at that commit, including
+   `teams/platform/apps/common/bq-extract/` and `teams/platform/lib/app_task.py`.
+2. The DAG imports `app_task` from that checkout, like the dbt helper.
+3. `app_task` hashes `bq-extract/` in that checkout. Its files are what they were at 1.1.0, so the
+   hash is the one CI computed when that code was merged.
+4. The pod runs `bq-extract:<that hash>`. Tags are immutable, so it's the same image.
+
+| Must hold | Why it does |
+|---|---|
+| The image was pushed | Release tags are commits on `main`, and `apps.yaml` pushes every app change on `main` |
+| It's still in the registry | Only while retention keeps it: the registry's cleanup policy is the rollback window |
+| It's on the node (`kind` only) | After changing a `tracking_ref`, run `make airflow-image` in the data platform repo: it loads the images of every ref in the values. GKE pulls them |
+| A run doesn't switch halfway | Each DAG run keeps the commit it started with, even if the ref moves |
+
+To see which images a tag runs, check it out and list them:
+
+```bash
+git worktree add /tmp/sales-v1.2.0 sales-v1.2.0 && python3 /tmp/sales-v1.2.0/teams/platform/lib/app_image.py
+```
+
+The task log shows the image a run used (`'image': '…/bq-extract:0226adca3b6a'` in the pod spec),
+and `test_app_tasks_run_this_checkouts_images` fails if a DAG stops using its own checkout's hash.
+
 ### Fix forward (the default)
 
 1. Open a PR titled `fix(sales): …` and squash-merge it. It runs in dev minutes later.

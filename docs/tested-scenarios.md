@@ -110,10 +110,30 @@ with each team's DAG importing them from its own bundle checkout?
   `plugins/dbt_team_dag.py`, the path setup must insert at position 0, or the image's copy wins.
   Remove `plugins/` from the image once the helpers have moved.
 
+## 9. An app DAG in dev: images by content hash
+
+**Did:** merged PR #28 (`bq-extract`, `pg-load`) and PR #30 (`sales_to_postgres`, sales'
+`transform`), then triggered `sales_dbt` in dev.
+
+**Saw:**
+- `apps.yaml` on `main` skipped `bq-extract` and `pg-load` (`exists: …`, pushed by #28) and pushed
+  only `sales/transform`: same code, same tag.
+- The first run failed with `ErrImagePull … 403 Forbidden`: the images weren't on the kind node, so
+  it tried to pull from Artifact Registry without credentials. `airflow-image.sh` only loaded the
+  Airflow image, whose tag is in the values. App tags aren't in any values file, so the script now
+  computes them from each `tracking_ref` with that ref's `app_image.py`, from its own clone of the
+  repository (the dev container has no monorepo checkout).
+- After loading, extract → transform → load ran; the pod spec in the task log shows the image
+  tags, `config.apps.data_folder` and the mounted credentials.
+- The version chip showed `v1.1.0` while the sales 1.2.0 release PR was open: dev runs `main`, the
+  chip is the last release (see [release-flow.md](release-flow.md#5-prod-one-team-at-a-time)).
+
 ## Not tested yet
 
 - Platform release 1.1.0 in prod: merge #24, move prod's platform bundle to `platform-v1.1.0`.
-- Rollback: move a team's prod `tracking_ref` back to its previous tag.
+- Rollback: move a team's prod `tracking_ref` back to its previous tag. With apps: change sales'
+  `transform`, release `sales-v1.3.0`, roll back to `sales-v1.2.0`, and check the task log shows
+  the old image tag ([Rollback and app images](release-flow.md#rollback-and-app-images)).
 - A breaking change in staging, such as a renamed column (see [Breaking changes between
   teams](release-flow.md#breaking-changes-between-teams)).
 - A fix after a release (1.1.0 → 1.1.1) and the release-branch exception.
