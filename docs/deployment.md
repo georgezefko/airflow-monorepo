@@ -50,6 +50,36 @@ Each folder with a `Dockerfile` under `teams/<team>/apps/` is one image, run by 
 The query and the DDL come from the team's DAG, not the image: a team changes what it extracts
 and loads with a release of its own, and no image is built.
 
+### What app pods need from each environment
+
+DAGs run apps with `app_task` ([`teams/platform/lib/app_task.py`](../teams/platform/lib/app_task.py)),
+one `KubernetesPodOperator` each. The pods start in Airflow's namespace (the chart's default
+`allowPodLaunching: true` lets task pods create them) and need:
+
+| What | Dev | Why |
+|---|---|---|
+| A bucket for files between steps | `gs://<project>-airflow-data`, deleted after 7 days | Each step is its own pod: extract writes parquet, transform reads it, load reads the result |
+| `config.apps.data_folder` | `gs://project-09344e23-c1cd-49df-a40-airflow-data/dev` (`/prod` for prod) | Each run writes to `<data_folder>/<dag_id>/<run_id>/` |
+| Secret `analytics-postgres` | `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE=analytics_dev` | For `pg-load`; the database is created on the first load |
+| Secret `airflow-gcp-adc` | The one Airflow already mounts | `kind` only; on GKE, Workload Identity |
+
+Create the bucket once:
+
+```bash
+P=project-09344e23-c1cd-49df-a40
+gcloud storage buckets create gs://${P}-airflow-data --project=$P --location=US --uniform-bucket-level-access
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":7}}]}' > /tmp/lifecycle.json
+gcloud storage buckets update gs://${P}-airflow-data --lifecycle-file=/tmp/lifecycle.json
+```
+
+The Secret, per namespace (`develop` for dev, `prod` with `PGDATABASE=analytics_prod`):
+
+```bash
+kubectl create secret generic analytics-postgres -n develop \
+  --from-literal=PGHOST=postgres.develop.svc.cluster.local --from-literal=PGUSER=postgres \
+  --from-literal=PGPASSWORD=postgres --from-literal=PGDATABASE=analytics_dev
+```
+
 ## DAG bundles
 
 One `GitDagBundle` per team, all on this repository, set in Airflow's

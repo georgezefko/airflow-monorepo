@@ -3,6 +3,7 @@
 A failure names the team, e.g. test_dags_import_cleanly[sales]. Team-specific tests go in
 teams/<team>/tests/.
 """
+import sys
 from pathlib import Path
 
 import pytest
@@ -44,6 +45,18 @@ def test_helpers_come_from_the_checkout_not_the_image(team_dags):
     assert Path(dbt_team_dag.__file__).parent == Path(__file__).parents[1] / "teams" / "platform" / "lib"
 
 
-def test_every_dag_runs_dbt_models(team_dags):
-    for dag_id, dag in dag_bag(team_dags).dags.items():
+def test_every_dbt_dag_runs_dbt_models(team_dags):
+    dbt_dags = {d: dag for d, dag in dag_bag(team_dags).dags.items() if "dbt" in dag.tags}
+    assert dbt_dags, "no dbt DAG"
+    for dag_id, dag in dbt_dags.items():
         assert any("run" in task.task_id for task in dag.tasks), f"{dag_id} selects no dbt models"
+
+
+def test_app_tasks_run_this_checkouts_images():
+    sys.path.insert(0, str(Path(__file__).parents[1] / "teams" / "platform" / "lib"))
+    from app_image import image
+
+    dag = dag_bag(Path(__file__).parents[1] / "teams" / "sales" / "dags").dags["sales_to_postgres"]
+    apps = Path(__file__).parents[1] / "teams"
+    assert dag.get_task("extract").image == image(apps / "platform" / "apps" / "common" / "bq-extract")
+    assert dag.get_task("transform").image == image(apps / "sales" / "apps" / "transform")
