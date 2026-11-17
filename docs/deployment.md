@@ -22,6 +22,33 @@ On `kind`, load the image into the cluster (`docker pull`, then `kind load docke
 pulling from Artifact Registry: a registry token lasts one hour, so a pull secret would break when
 a pod restarts. GKE pulls from Artifact Registry directly with Workload Identity.
 
+## App images
+
+Each folder with a `Dockerfile` under `teams/<team>/apps/` is one image, run by a DAG as a pod:
+
+| | |
+|---|---|
+| Image | `us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/<team>/<path>:<hash>`, e.g. `…/platform/common/bq-extract:0226adca3b6a` |
+| Tag | A hash of the app folder's files ([`app_image.py`](../teams/platform/lib/app_image.py)). Same code, same tag, so a merge rebuilds nothing that's already pushed |
+| Built by | [`apps.yaml`](../.github/workflows/apps.yaml): PRs check that every app builds; `main` pushes the tags that aren't in the registry yet |
+| List them | `python3 teams/platform/lib/app_image.py` |
+
+- **The DAG computes the tag from its own checkout.** Sales on `sales-v1.2.0` runs the images of
+  that commit, even after platform changes `bq-extract`. A rollback to an older tag runs older
+  images, so the registry must keep them: its retention is how far back you can roll back.
+- **No image per branch.** PRs can't push (only `main` may act as `ci-build`). To try an app on
+  `kind` before merging, build it locally with its tag and `kind load` it.
+- **On `kind`**, load the images after each merge: `scripts/kind-load-apps.sh`. For a team on an
+  older tag, run it from a checkout of that tag.
+
+| App | Does | Arguments |
+|---|---|---|
+| `common/bq-extract` | Runs a BigQuery query, writes parquet | `--sql`, `--out` (gs:// or a path). Env: `GCP_PROJECT`, credentials as for dbt |
+| `common/pg-load` | Loads parquet into a Postgres table, replacing its rows in one transaction. Creates the database if missing, then runs `--ddl` | `--in`, `--table schema.table`, `--ddl`. Env: `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE` |
+
+The query and the DDL come from the team's DAG, not the image: a team changes what it extracts
+and loads with a release of its own, and no image is built.
+
 ## DAG bundles
 
 One `GitDagBundle` per team, all on this repository, set in Airflow's
@@ -117,6 +144,7 @@ config:
 | Event | Change in the data platform repo |
 |---|---|
 | Merge to `main` (any team) | Nothing: dev bundles track `main` |
+| An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release. On `kind`, run `scripts/kind-load-apps.sh` |
 | Platform changes `Dockerfile`, `plugins/` or the dbt version (`uv.lock`) | Dev's image tag → the new `airflow:<airflow version>-<short sha>` |
 | A team releases, e.g. `sales-v1.0.2` | Prod: that team's `tracking_ref` → `sales-v1.0.2`, nothing else |
 | Rollback | Prod: the team's `tracking_ref` → its previous tag |

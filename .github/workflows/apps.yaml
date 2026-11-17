@@ -1,0 +1,51 @@
+name: Apps
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'teams/*/apps/**'
+      - 'teams/platform/lib/app_image.py'
+      - '.github/workflows/apps.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'teams/*/apps/**'
+      - 'teams/platform/lib/app_image.py'
+      - '.github/workflows/apps.yaml'
+
+jobs:
+  # One image per teams/<team>/apps/<app>, tagged with a hash of the app's folder (app_image.py).
+  # PRs only check that the images build: only main may push (ci-build, see docs/ci-gcp-auth.md).
+  # On main, a tag that's already in the registry is the same code, so it's skipped.
+  images:
+    runs-on: ubuntu-latest
+    permissions: {contents: read, id-token: write}
+    env:
+      REGISTRY: us-central1-docker.pkg.dev
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        if: github.event_name == 'push'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/providers/github
+          service_account: ci-build@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
+          token_format: access_token
+      - name: Log in to Artifact Registry
+        if: github.event_name == 'push'
+        run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
+      # Multi-arch so the same tag runs on GKE (amd64) and a Mac's kind node (arm64)
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # shortcut: PRs build every app, not only changed ones; filter by hash once there are many apps
+      - name: Build, and on main push the new tags
+        run: |
+          python3 teams/platform/lib/app_image.py | while read -r dir image; do
+            if [ "$GITHUB_EVENT_NAME" = push ]; then
+              if docker manifest inspect "$image" >/dev/null 2>&1; then echo "exists: $image"; continue; fi
+              docker buildx build --platform linux/amd64,linux/arm64 --push -t "$image" "$dir"
+            else
+              docker buildx build -t "$image" "$dir"
+            fi
+          done

@@ -39,6 +39,7 @@ tests/                          DAG rules for every team, run once per team
 teams/
   platform/  dags/  dbt/        staging models, read by every team
              lib/               shared DAG helpers, imported by every team's DAGs
+             apps/common/       shared containerised apps (bq-extract, pg-load)
   sales/     dags/  dbt/
   marketing/ dags/  dbt/
 ```
@@ -52,14 +53,17 @@ teams/
   (`path:teams/<team>/dbt`), so DAGs, models and SQL always come from one commit.
 - **What's an image and what isn't.** Teams' DAGs, dbt models and SQL are never in an image; they
   come from the bundle. The only images are platform's Airflow image (Airflow, Cosmos and the dbt
-  CLI) and, later, containerised apps.
+  CLI) and the containerised apps in `teams/<team>/apps/`, one image each.
 - **Shared DAG helpers are in `teams/platform/lib/`, not the image.** Each team's DAG imports them
   from its own checkout, so a team's tag pins the helpers it was tested with, and a rollback brings
   them back too.
 - **Shared files stay outside `teams/`.** Platform owns them. They belong to no team's release, so
   a change to them reaches prod with each team's next release.
-- **Later:** `teams/<team>/apps/<app>/` for containerised apps (shared apps go under `platform`),
-  `teams/<team>/sql/` for plain queries and `teams/<team>/tests/` for team-specific tests.
+- **Apps: `teams/<team>/apps/<app>/`**, each with its own `Dockerfile`, `pyproject.toml` and
+  `uv.lock`. Shared apps are platform's, in `teams/platform/apps/common/`. An image's tag is a hash
+  of its folder, so a team's tag pins the images too (see
+  [`deployment.md`](deployment.md#app-images)).
+- **Later:** `teams/<team>/sql/` for plain queries and `teams/<team>/tests/` for team-specific tests.
 
 Adding a team: create `teams/<team>/dags` and `teams/<team>/dbt`, add the folder to `model-paths`
 in `dbt_project.yml` and add a DAG bundle for it.
@@ -332,7 +336,7 @@ After that, release-please creates every tag.
 | Shared code | Ships in | Who decides when it reaches prod |
 |---|---|---|
 | DAG helpers (`teams/platform/lib/`) | Every team's bundle checkout | Each team, with its next release |
-| Shared apps (`teams/platform/apps/`, later) | Every team's bundle checkout | Each team, with its next release |
+| Shared apps (`teams/platform/apps/common/`) | An image per app, its tag computed from each team's checkout | Each team, with its next release |
 | Airflow, Cosmos, the dbt CLI (`Dockerfile`, `uv.lock`) | The Airflow image | Platform, for every team at once |
 
 **Helpers.** Each team's DAG adds `teams/platform/lib` from its own checkout to `sys.path`:
