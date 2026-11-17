@@ -3,6 +3,7 @@
   "bootstrap-sha": "03886928528e6d5687e77d58097aabb9c3805d6e",
   "release-type": "simple",
   "separate-pull-requests": true,
+  "always-update": true,
   "pull-request-title-pattern": "chore(${component}): release ${version}",
   "component-no-space": true,
   "packages": {
