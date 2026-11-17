@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/georgezefko/airflow-monorepo/compare/sales-v1.1.0...sales-v1.2.0) (2026-11-17)
+
+
+### Features
+
+* **sales:** weekly revenue from BigQuery to Postgres with apps ([#30](https://github.com/georgezefko/airflow-monorepo/issues/30)) ([5bcd170](https://github.com/georgezefko/airflow-monorepo/commit/5bcd170a771677833ef33bcee21cf150921fa7a8))
+
 ## [1.1.0](https://github.com/georgezefko/airflow-monorepo/compare/sales-v1.0.1...sales-v1.1.0) (2026-11-16)
 
 
