@@ -140,6 +140,11 @@ release-please opened "release 1.2.0" for platform again (#33). Fixed by setting
 `1.2.0` (#36) and closing #33. Prevention: `always-update` (#37). See [never update release PRs by
 hand](release-flow.md#conflicts-between-prs).
 
+**Then, with `always-update` (#37):** #38 changed all three teams, so three release PRs opened
+(platform #39, sales #41, marketing #40). Merged one at a time, with nothing done by hand in
+between: each PR has only release-please's own commit, the manifest ended at 1.3.0 for every
+team, and all three tags exist.
+
 ## Not tested yet
 
 - Platform release 1.1.0 in prod: merge #24, move prod's platform bundle to `platform-v1.1.0`.
