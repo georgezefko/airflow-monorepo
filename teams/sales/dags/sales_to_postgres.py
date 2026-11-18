@@ -8,6 +8,7 @@ from airflow.sdk import DAG, Asset
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "teams" / "platform" / "lib"))
 from app_task import DATA, app_task  # noqa: E402
+from version_tag import version_tag  # noqa: E402
 
 SALES = Path(__file__).resolve().parents[1]
 SQL = SALES / "sql"
@@ -17,7 +18,7 @@ with DAG(
     schedule=Asset("analytics_sales_ready"),
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    tags=["sales", "app", "v" + (SALES / "version.txt").read_text().strip()],
+    tags=["sales", "app", version_tag(SALES)],
 ):
     extract = app_task(
         "platform/common/bq-extract", "extract",

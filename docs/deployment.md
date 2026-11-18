@@ -124,6 +124,18 @@ Set on every Airflow component (in Helm: `env`):
 | `GCP_PROJECT` | The environment's GCP project, e.g. `project-09344e23-c1cd-49df-a40` for dev | `profiles.yml` needs it, and Cosmos runs `dbt ls` while parsing DAGs. Bundles have no `.env` file (locally dbt reads one; that hid this requirement once) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path of the mounted credentials file | `kind` only, see below |
 
+In dev only, also set this Airflow config (Helm: `config`, which merges with the common values,
+unlike `env`):
+
+```yaml
+config:
+  platform:
+    version_tag: main   # DAGs show "main" instead of the last release's version
+```
+
+Without it, a DAG's version chip is `v<version.txt>`. That's exact in prod, where the bundle is
+at a release tag, but dev runs `main`, which is usually ahead of the last release.
+
 The BigQuery datasets keep their names in every environment (`analytics_staging`, `analytics_sales`,
 `analytics_marketing`): each environment is its own GCP project.
 

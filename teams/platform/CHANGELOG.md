@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/georgezefko/airflow-monorepo/compare/platform-v1.2.0...platform-v1.3.0) (2026-11-17)
+
+
+### Features
+
+* **platform:** dev DAGs show "main" instead of a version ([#38](https://github.com/georgezefko/airflow-monorepo/issues/38)) ([e8e1b13](https://github.com/georgezefko/airflow-monorepo/commit/e8e1b13af5d83ca8f557933a396ec4a36bf83aaf))
+
 ## [1.2.0](https://github.com/georgezefko/airflow-monorepo/compare/platform-v1.1.0...platform-v1.2.0) (2026-11-17)
 
 

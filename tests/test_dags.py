@@ -52,11 +52,19 @@ def test_every_dbt_dag_runs_dbt_models(team_dags):
         assert any("run" in task.task_id for task in dag.tasks), f"{dag_id} selects no dbt models"
 
 
-def test_app_tasks_run_this_checkouts_images():
+def test_app_tasks_run_this_checkouts_images(team_dags):
     sys.path.insert(0, str(Path(__file__).parents[1] / "teams" / "platform" / "lib"))
-    from app_image import image
+    from app_image import all_apps, image
 
-    dag = dag_bag(Path(__file__).parents[1] / "teams" / "sales" / "dags").dags["sales_to_postgres"]
-    apps = Path(__file__).parents[1] / "teams"
-    assert dag.get_task("extract").image == image(apps / "platform" / "apps" / "common" / "bq-extract")
-    assert dag.get_task("transform").image == image(apps / "sales" / "apps" / "transform")
+    this_checkout = {image(d) for d in all_apps(Path(__file__).parents[1])}
+    for dag_id, dag in dag_bag(team_dags).dags.items():
+        for task in dag.tasks:
+            if hasattr(task, "image"):
+                assert task.image in this_checkout, f"{dag_id}.{task.task_id} runs {task.image}"
+
+
+def test_version_chip_is_the_release_or_the_configured_tag(team_dags, monkeypatch):
+    version = "v" + (team_dags.parent / "version.txt").read_text().strip()
+    assert all(version in dag.tags for dag in dag_bag(team_dags).dags.values())
+    monkeypatch.setenv("AIRFLOW__PLATFORM__VERSION_TAG", "main")  # what dev sets
+    assert all("main" in dag.tags and version not in dag.tags for dag in dag_bag(team_dags).dags.values())

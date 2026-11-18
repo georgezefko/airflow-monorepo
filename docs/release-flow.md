@@ -212,7 +212,7 @@ by its commit SHA.
 
 | File | What it holds |
 |---|---|
-| [`release-please-config.json`](../release-please-config.json) | One package per team folder; one release PR each |
+| [`release-please-config.json`](../release-please-config.json) | One package per team folder; one release PR each. `always-update` rebuilds every open release PR from `main` on each push, so they're never behind `main` |
 | [`.release-please-manifest.json`](../.release-please-manifest.json) | Each team's current version, updated by release PRs |
 | [`release-please.yaml`](../.github/workflows/release-please.yaml) | Runs release-please on every push to `main` |
 
