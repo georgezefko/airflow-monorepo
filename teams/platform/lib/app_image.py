@@ -5,10 +5,12 @@ images with it, and DAGs compute it from their own checkout: a team's release ta
 Run it to list every app: python teams/platform/lib/app_image.py
 """
 import hashlib
+import os
 import sys
 from pathlib import Path
 
-REGISTRY = "us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo"
+# Each environment's own registry (Helm env APPS_REGISTRY); dev's when unset: local, CI and tests.
+REGISTRY = os.environ.get("APPS_REGISTRY", "us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo")
 
 
 def app_hash(app_dir):

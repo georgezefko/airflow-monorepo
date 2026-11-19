@@ -20,6 +20,7 @@ jobs:
     env:
       REGISTRY: us-central1-docker.pkg.dev
       REPO: us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow
+      PROD_REPO: us-central1-docker.pkg.dev/tutorials-demo-prod/airflow-monorepo/airflow  # prod's own registry
     steps:
       - uses: actions/checkout@v4
       # Tag <airflow version>-<short sha>, e.g. 3.3.2-d746796: unique per commit, and says which Airflow it runs.
@@ -42,4 +43,6 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ env.REPO }}:${{ steps.tag.outputs.tag }}
+          tags: |
+            ${{ env.REPO }}:${{ steps.tag.outputs.tag }}
+            ${{ env.PROD_REPO }}:${{ steps.tag.outputs.tag }}

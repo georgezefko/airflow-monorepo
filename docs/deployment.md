@@ -8,7 +8,7 @@ one folder per environment). This page is the contract between the two. How vers
 
 | | |
 |---|---|
-| Image | `us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/airflow:<airflow version>-<short sha>`, e.g. `airflow:3.3.2-385e98c` |
+| Image | `us-central1-docker.pkg.dev/<project>/airflow-monorepo/airflow:<airflow version>-<short sha>`, e.g. `airflow:3.3.2-385e98c`. Pushed with the same tag to each environment's registry: `project-09344e23-c1cd-49df-a40` (dev) and `tutorials-demo-prod` (prod) |
 | Built by | [`build.yaml`](../.github/workflows/build.yaml), on every push to `main` that changes `Dockerfile`, `.dockerignore`, `plugins/`, `pyproject.toml` or `uv.lock` |
 | Contains | Airflow 3.3.2, Cosmos, the dbt CLI in `/home/airflow/dbt-venv/bin/dbt`, and `plugins/`: a legacy copy of the DAG helper, kept for tags from before it moved to `teams/platform/lib/` ([why](release-flow.md#shared-code-pinned-by-each-teams-tag-or-in-the-image)) |
 | dbt version | Exactly what `uv.lock` pins, every package: the same dbt CI's slim build runs. Upgrade dbt with `pyproject.toml` and `uv lock` |
@@ -28,7 +28,7 @@ Each folder with a `Dockerfile` under `teams/<team>/apps/` is one image, run by 
 
 | | |
 |---|---|
-| Image | `us-central1-docker.pkg.dev/project-09344e23-c1cd-49df-a40/airflow-monorepo/<team>/<path>:<hash>`, e.g. `…/platform/common/bq-extract:0226adca3b6a` |
+| Image | `us-central1-docker.pkg.dev/<project>/airflow-monorepo/<team>/<path>:<hash>`, e.g. `…/platform/common/bq-extract:0226adca3b6a`, in dev's and prod's registry like the Airflow image. DAGs name the registry from `APPS_REGISTRY` |
 | Tag | A hash of the app folder's files ([`app_image.py`](../teams/platform/lib/app_image.py)). Same code, same tag, so a merge rebuilds nothing that's already pushed |
 | Built by | [`apps.yaml`](../.github/workflows/apps.yaml): PRs check that every app builds; `main` pushes the tags that aren't in the registry yet |
 | List them | `python3 teams/platform/lib/app_image.py` |
@@ -116,12 +116,14 @@ One `GitDagBundle` per team, all on this repository, set in Airflow's
 
 ## Environment
 
-Set on every Airflow component (in Helm: `env`):
+Set on every Airflow component (in Helm: `env`). Set it in each environment's values file, not in
+the common one: Helm replaces lists instead of merging them.
 
 | Variable | Value | Why |
 |---|---|---|
-| `GCP_PROJECT` | The environment's GCP project, e.g. `project-09344e23-c1cd-49df-a40` for dev | `profiles.yml` needs it, and Cosmos runs `dbt ls` while parsing DAGs. Bundles have no `.env` file (locally dbt reads one; that hid this requirement once) |
+| `GCP_PROJECT` | The environment's GCP project: `project-09344e23-c1cd-49df-a40` for dev, `tutorials-demo-prod` for prod | `profiles.yml` needs it, and Cosmos runs `dbt ls` while parsing DAGs. Bundles have no `.env` file (locally dbt reads one; that hid this requirement once) |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path of the mounted credentials file | `kind` only, see below |
+| `APPS_REGISTRY` | The environment's app registry, e.g. `us-central1-docker.pkg.dev/tutorials-demo-prod/airflow-monorepo` for prod | App tasks name their image with it. Unset means dev's registry |
 
 In dev only, also set this Airflow config (Helm: `config`, which merges with the common values,
 unlike `env`):
