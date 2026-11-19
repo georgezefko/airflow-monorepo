@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/georgezefko/airflow-monorepo/compare/platform-v1.3.0...platform-v1.4.0) (2026-11-19)
+
+
+### Features
+
+* **platform:** push images to prod's own registry ([#42](https://github.com/georgezefko/airflow-monorepo/issues/42)) ([b15ad78](https://github.com/georgezefko/airflow-monorepo/commit/b15ad78777362252798b5246665b40d7489eb594))
+
 ## [1.3.0](https://github.com/georgezefko/airflow-monorepo/compare/platform-v1.2.0...platform-v1.3.0) (2026-11-17)
 
 
