@@ -163,8 +163,23 @@ Team folders keep that rare: teams don't edit each other's files, so conflicts a
   in it.
 
 Requiring up-to-date branches costs a rebase and a CI run each time `main` moves. With many PRs
-merging a day, a merge queue does that rebasing and testing instead. Release PRs aren't affected:
-release-please rewrites its PR on every push to `main`.
+merging a day, a merge queue does that rebasing and testing instead.
+
+**Release PRs: never update them by hand.** Each release PR changes its own line of
+`.release-please-manifest.json`, and those lines are adjacent, so merging `main` into one by hand
+conflicts there. That happened with platform 1.2.0: after sales' release merged, release-please
+left platform's release PR as it was (its changelog hadn't changed), so it was behind `main` and
+the up-to-date rule blocked it. `main` was merged in by hand, the conflict was resolved by keeping
+`main`'s side, and platform's line was lost: `platform-v1.2.0` was tagged, but the manifest
+stayed at `1.1.0`, so release-please opened platform 1.2.0 again.
+
+- **Prevention:** `"always-update": true` in `release-please-config.json`. release-please rebuilds
+  every open release PR from `main` on each push, so they're never behind `main`. After one
+  release merges, wait for the Release workflow; the others are up to date.
+- **If you must resolve it by hand:** keep both sides. Other teams' lines from `main`, and this
+  PR's own line. Never take one side of the whole file.
+- **If a line was already lost:** a `chore` PR that sets the manifest to the released version,
+  then close the duplicate release PR.
 
 ## 3. Dev: every merge
 
@@ -323,6 +338,15 @@ The Airflow image is shared by every team and promoted separately, by platform.
 Each DAG has its team's version as a tag (`v1.5.0`), read from `teams/<team>/version.txt` in the
 bundle's checkout, so the Airflow UI shows which release every team runs in each environment.
 
+**In dev, the chip is `main`.** Dev runs `main`, which is usually ahead of the last release:
+while sales' release PR for 1.2.0 was open, dev already ran that code but showed `v1.1.0`. So dev
+sets `config.platform.version_tag: main` ([`deployment.md`](deployment.md#environment)), and its
+DAGs show `main`. The exact commit of each run is its bundle version in the Airflow UI. In prod the
+chip is the version: the tag and `version.txt` are the same commit.
+
+Merging a release PR doesn't change what dev runs. It marks the code on `main` as a release: it
+creates the tag prod can point at and the changelog.
+
 ### A team's first tag
 
 A team that has never had a release PR merged, like platform and marketing at 1.0.0, has no tag
@@ -403,6 +427,35 @@ tagging `main`. Release branches exist only for the one case below that needs th
 When prod is broken, move the team back to its previous release in the deploy repo, for example
 the sales bundle's `tracking_ref: sales-v1.4.0` instead of `sales-v1.5.0`. Nothing is built: the
 old tag still points at the same commit. Then fix calmly.
+
+### Rollback and app images
+
+A rollback brings back the app images too, and nothing has to record which image goes with which
+release: the tag is computed from the code. Prod sales moving from `sales-v1.2.0` back to
+`sales-v1.1.0`:
+
+1. The bundle checks out `sales-v1.1.0`: the whole repository at that commit, including
+   `teams/platform/apps/common/bq-extract/` and `teams/platform/lib/app_task.py`.
+2. The DAG imports `app_task` from that checkout, like the dbt helper.
+3. `app_task` hashes `bq-extract/` in that checkout. Its files are what they were at 1.1.0, so the
+   hash is the one CI computed when that code was merged.
+4. The pod runs `bq-extract:<that hash>`. Tags are immutable, so it's the same image.
+
+| Must hold | Why it does |
+|---|---|
+| The image was pushed | Release tags are commits on `main`, and `apps.yaml` pushes every app change on `main` |
+| It's still in the registry | Only while retention keeps it: the registry's cleanup policy is the rollback window |
+| It's on the node (`kind` only) | After changing a `tracking_ref`, run `make airflow-image` in the data platform repo: it loads the images of every ref in the values. GKE pulls them |
+| A run doesn't switch halfway | Each DAG run keeps the commit it started with, even if the ref moves |
+
+To see which images a tag runs, check it out and list them:
+
+```bash
+git worktree add /tmp/sales-v1.2.0 sales-v1.2.0 && python3 /tmp/sales-v1.2.0/teams/platform/lib/app_image.py
+```
+
+The task log shows the image a run used (`'image': '…/bq-extract:0226adca3b6a'` in the pod spec),
+and `test_app_tasks_run_this_checkouts_images` fails if a DAG stops using its own checkout's hash.
 
 ### Fix forward (the default)
 
