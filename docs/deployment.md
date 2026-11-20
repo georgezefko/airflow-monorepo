@@ -28,7 +28,7 @@ Each folder with a `Dockerfile` under `teams/<team>/apps/` is one image, run by 
 
 | | |
 |---|---|
-| Image | `us-central1-docker.pkg.dev/<project>/airflow-monorepo/<team>/<path>:<hash>`, e.g. `…/platform/common/bq-extract:0226adca3b6a`, in dev's and prod's registry like the Airflow image. DAGs name the registry from `APPS_REGISTRY` |
+| Image | `us-central1-docker.pkg.dev/<project>/airflow-monorepo/<team>/<path>:<hash>`, e.g. `…/platform/common/bq-extract:0226adca3b6a`. Every merge pushes new tags to dev's registry ([`apps.yaml`](../.github/workflows/apps.yaml)); a team release pushes the same images to prod's ([`promote.yaml`](../.github/workflows/promote.yaml)), not rebuilt. DAGs name the registry from `APPS_REGISTRY` |
 | Tag | A hash of the app folder's files ([`app_image.py`](../teams/platform/lib/app_image.py)). Same code, same tag, so a merge rebuilds nothing that's already pushed |
 | Built by | [`apps.yaml`](../.github/workflows/apps.yaml): PRs check that every app builds; `main` pushes the tags that aren't in the registry yet |
 | List them | `python3 teams/platform/lib/app_image.py` |
@@ -189,7 +189,7 @@ config:
 | Event | Change in the data platform repo |
 |---|---|
 | Merge to `main` (any team) | Nothing: dev bundles track `main` |
-| An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release. On `kind`, load the new images (`scripts/app-images.sh` in the data platform repo) |
+| An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release, when `promote.yaml` pushes it to prod's registry. On `kind`, load the new images (`scripts/app-images.sh` in the data platform repo) |
 | Platform changes `Dockerfile`, `plugins/` or the dbt version (`uv.lock`) | Dev's image tag → the new `airflow:<airflow version>-<short sha>` |
 | A team releases, e.g. `sales-v1.0.2` | Prod: that team's `tracking_ref` → `sales-v1.0.2`, nothing else |
 | Rollback | Prod: the team's `tracking_ref` → its previous tag |

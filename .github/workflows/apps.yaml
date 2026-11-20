@@ -17,13 +17,12 @@ on:
 jobs:
   # One image per teams/<team>/apps/<app>, tagged with a hash of the app's folder (app_image.py).
   # PRs only check that the images build: only main may push (ci-build, see docs/ci-gcp-auth.md).
-  # On main, each image goes to dev's and prod's registry; a tag already in both is the same code, so it's skipped.
+  # On main, a tag that's already in the registry is the same code, so it's skipped.
   images:
     runs-on: ubuntu-latest
     permissions: {contents: read, id-token: write}
     env:
       REGISTRY: us-central1-docker.pkg.dev
-      PROD_APPS: us-central1-docker.pkg.dev/tutorials-demo-prod/airflow-monorepo  # prod's own registry
     steps:
       - uses: actions/checkout@v4
       - id: auth
@@ -44,11 +43,8 @@ jobs:
         run: |
           python3 teams/platform/lib/app_image.py | while read -r dir image; do
             if [ "$GITHUB_EVENT_NAME" = push ]; then
-              prod="$PROD_APPS/${image#*/airflow-monorepo/}"  # same app and tag, prod's registry
-              if docker manifest inspect "$image" >/dev/null 2>&1 && docker manifest inspect "$prod" >/dev/null 2>&1; then
-                echo "exists: $image"; continue
-              fi
-              docker buildx build --platform linux/amd64,linux/arm64 --push -t "$image" -t "$prod" "$dir"
+              if docker manifest inspect "$image" >/dev/null 2>&1; then echo "exists: $image"; continue; fi
+              docker buildx build --platform linux/amd64,linux/arm64 --push -t "$image" "$dir"
             else
               docker buildx build -t "$image" "$dir"
             fi

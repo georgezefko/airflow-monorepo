@@ -13,6 +13,8 @@ permissions: {}  # the GitHub App's token does all the writing
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
     steps:
       # A token from the release GitHub App, not GITHUB_TOKEN: PRs opened with GITHUB_TOKEN
       # don't trigger workflows, so the release PRs would never get their required checks.
@@ -24,8 +26,19 @@ jobs:
 
       # One release PR per team folder (release-please-config.json). Merging one creates the
       # tag, e.g. sales-v1.0.1, and a GitHub release.
-      - uses: googleapis/release-please-action@v5
+      - id: release
+        uses: googleapis/release-please-action@v5
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  # A merged release PR: push the app images that release runs to prod's registry.
+  # This commit is the one the new tag points at.
+  promote:
+    needs: release-please
+    if: needs.release-please.outputs.releases_created == 'true'
+    permissions: {contents: read, id-token: write}
+    uses: ./.github/workflows/promote.yaml
+    with:
+      ref: ${{ github.sha }}
