@@ -6,7 +6,6 @@ on:
     paths:  # everything that goes into the Airflow image
       - 'Dockerfile'
       - '.dockerignore'
-      - 'plugins/**'
       - 'pyproject.toml'  # dbt versions
       - 'uv.lock'
       - '.github/workflows/build.yaml'

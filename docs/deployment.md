@@ -9,8 +9,8 @@ one folder per environment). This page is the contract between the two. How vers
 | | |
 |---|---|
 | Image | `us-central1-docker.pkg.dev/<project>/airflow-monorepo/airflow:<airflow version>-<short sha>`, e.g. `airflow:3.3.2-385e98c`. Pushed with the same tag to each environment's registry: `project-09344e23-c1cd-49df-a40` (dev) and `tutorials-demo-prod` (prod) |
-| Built by | [`build.yaml`](../.github/workflows/build.yaml), on every push to `main` that changes `Dockerfile`, `.dockerignore`, `plugins/`, `pyproject.toml` or `uv.lock` |
-| Contains | Airflow 3.3.2, Cosmos, the dbt CLI in `/home/airflow/dbt-venv/bin/dbt`, and `plugins/`: a legacy copy of the DAG helper, kept for tags from before it moved to `teams/platform/lib/` ([why](release-flow.md#shared-code-pinned-by-each-teams-tag-or-in-the-image)) |
+| Built by | [`build.yaml`](../.github/workflows/build.yaml), on every push to `main` that changes `Dockerfile`, `.dockerignore`, `pyproject.toml` or `uv.lock` |
+| Contains | Airflow 3.3.2, Cosmos and the dbt CLI in `/home/airflow/dbt-venv/bin/dbt`. No DAG code: the shared DAG helpers come from each bundle's checkout of `teams/platform/lib/` ([why](release-flow.md#shared-code-pinned-by-each-teams-tag-or-in-the-image)) |
 | dbt version | Exactly what `uv.lock` pins, every package: the same dbt CI's slim build runs. Upgrade dbt with `pyproject.toml` and `uv lock` |
 | Doesn't contain | Teams' DAGs, dbt models and SQL: they come from the DAG bundles |
 | Tags | `<airflow version>-<short sha>` of the commit that built it. Tags are never overwritten, so a tag always means the same image |
@@ -190,6 +190,6 @@ config:
 |---|---|
 | Merge to `main` (any team) | Nothing: dev bundles track `main` |
 | An app changes (`teams/*/apps/`) | Nothing: dev's checkout of `main` computes the new tag, prod gets it with each team's next release, when `promote.yaml` pushes it to prod's registry. On `kind`, load the new images (`scripts/app-images.sh` in the data platform repo) |
-| Platform changes `Dockerfile`, `plugins/` or the dbt version (`uv.lock`) | Dev's image tag → the new `airflow:<airflow version>-<short sha>` |
+| Platform changes `Dockerfile` or the dbt version (`uv.lock`) | Dev's image tag → the new `airflow:<airflow version>-<short sha>` |
 | A team releases, e.g. `sales-v1.0.2` | Prod: that team's `tracking_ref` → `sales-v1.0.2`, nothing else |
 | Rollback | Prod: the team's `tracking_ref` → its previous tag |

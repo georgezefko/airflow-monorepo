@@ -176,7 +176,7 @@ A bundle is versioned by commit: when a task starts, the worker checks out the e
 DAG run started with. Moving a ref never mixes code from two versions within one run.
 
 `build.yaml` builds only the platform's Airflow image, `airflow:<sha>`, when `Dockerfile` or
-`plugins/` change, and pushes it to Artifact Registry. Tags can't be overwritten, so a SHA always
+`uv.lock` change, and pushes it to Artifact Registry. Tags can't be overwritten, so a SHA always
 means the same image. How CI signs in: [`ci-gcp-auth.md`](ci-gcp-auth.md) and
 [`gcp-setup.md`](gcp-setup.md).
 
@@ -361,11 +361,13 @@ PR for them. A change there builds a new Airflow image: platform sets it in dev,
 team's `tracking_ref` changes. Every team runs on that one image, whatever its tag, so an upgrade
 of Cosmos or Airflow must still work with the helpers in older tags that prod runs.
 
-**`plugins/` is legacy.** Tags from before the move (`*-v1.1.0` and older) import the helper from
-the image's `/opt/airflow/plugins`. It stays in the image until every team's prod tag includes the
-move, then `plugins/` and its `COPY` line in the `Dockerfile` are deleted. The `sys.path.insert(0,
-…)` makes the checkout's copy win in the meantime; `test_helpers_come_from_the_checkout_not_the_image`
-checks it.
+**`plugins/` is gone from the image.** Its copy of the helper didn't just sit there for old tags:
+Airflow loads every file in `/opt/airflow/plugins` at startup as a module named after the file, so
+`import dbt_team_dag` returned the image's copy even with the checkout first on `sys.path`. Dev's dbt
+DAGs showed `v<version.txt>` instead of `main` because of it. It was removed once every team's prod
+tag imported the helper from `teams/platform/lib/`. Tags from before the move (`*-v1.1.0` and older)
+import it from the image, so they can't run on an image without `plugins/`: a rollback can't go
+further back than `*-v1.2.0` without also going back to an older image.
 
 ## Known limits
 
