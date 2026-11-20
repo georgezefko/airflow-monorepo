@@ -1,0 +1,48 @@
+name: Promote
+
+# A team release (e.g. sales-v1.5.0) is what prod can run, so that's when its app images go to
+# prod's registry. They aren't rebuilt: dev's image, which dev already ran, is pushed to prod's
+# registry under the same tag.
+# Called by release-please.yaml when a release PR is merged, not on the tag push: ci-build only
+# trusts runs on main (docs/gcp-setup.md). By hand: run it on main with an older release's tag.
+on:
+  workflow_call:
+    inputs:
+      ref: {type: string, required: true}
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Release tag to promote, e.g. sales-v1.5.0
+        required: true
+
+jobs:
+  apps:
+    runs-on: ubuntu-latest
+    permissions: {contents: read, id-token: write}
+    env:
+      REGISTRY: us-central1-docker.pkg.dev
+      PROD_APPS: us-central1-docker.pkg.dev/tutorials-demo-prod/airflow-monorepo
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/147789725218/locations/global/workloadIdentityPools/github/providers/github
+          service_account: ci-build@project-09344e23-c1cd-49df-a40.iam.gserviceaccount.com
+          token_format: access_token
+      - name: Log in to Artifact Registry
+        run: echo "${{ steps.auth.outputs.access_token }}" | docker login "$REGISTRY" -u oauth2accesstoken --password-stdin
+      - uses: docker/setup-buildx-action@v3
+      # Every app the release's checkout names, not only the team's own: its DAGs also run
+      # platform's shared apps. app_image.py without APPS_REGISTRY gives dev's names.
+      - name: Push dev's images to prod's registry
+        run: |
+          python3 teams/platform/lib/app_image.py | while read -r dir image; do
+            prod="$PROD_APPS/${image#*/airflow-monorepo/}"  # same app and tag, prod's registry
+            if docker manifest inspect "$prod" >/dev/null 2>&1; then echo "exists: $prod"; continue; fi
+            # shortcut: fails if the release was merged before Apps pushed this image to dev; re-run it then
+            docker manifest inspect "$image" >/dev/null 2>&1 || { echo "::error::not in dev's registry yet: $image"; exit 1; }
+            docker buildx imagetools create -t "$prod" "$image"
+          done
