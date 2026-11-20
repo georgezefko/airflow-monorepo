@@ -38,7 +38,7 @@ def test_airflow_discovers_every_dag(team_dags):
 
 
 def test_helpers_come_from_the_checkout_not_the_image(team_dags):
-    # The image still has an old copy in /opt/airflow/plugins for older tags; it must not win
+    # Each tag pins its own helpers: they must come from this checkout, never from the image
     dag_bag(team_dags)
     import dbt_team_dag
 

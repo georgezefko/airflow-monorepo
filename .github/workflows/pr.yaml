@@ -29,7 +29,6 @@ jobs:
             -e AIRFLOW__COSMOS__ENABLE_CACHE_DBT_LS=False \
             -e GCP_PROJECT \
             -v "$PWD:/opt/airflow/repo:ro" \
-            -v "$PWD/plugins:/opt/airflow/plugins:ro" \
             airflow-ci -m pytest tests -q -p no:cacheprovider
   dbt-build:
     needs: checks
